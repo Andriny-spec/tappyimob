@@ -1,0 +1,349 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  IMOBILIARIA
+  CORRETOR
+  CLIENTE
+}
+
+enum StatusUser {
+  ATIVO
+  INATIVO
+  PENDENTE
+  BLOQUEADO
+}
+
+enum TipoImovel {
+  CASA
+  APARTAMENTO
+  CONDOMINIO
+  TERRENO
+  SALA_COMERCIAL
+  GALPAO
+  FAZENDA
+  SITIO
+  CHACARA
+  OUTROS
+}
+
+enum TipoOperacao {
+  VENDA
+  ALUGUEL
+  VENDA_ALUGUEL
+}
+
+enum StatusImovel {
+  ATIVO
+  INATIVO
+  VENDIDO
+  ALUGADO
+  EM_ANALISE
+}
+
+// Modelo base para usuários
+model User {
+  id            String      @id @default(uuid())
+  nome          String
+  email         String      @unique
+  senha         String
+  role          Role
+  status        StatusUser  @default(ATIVO)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  // Relacionamentos
+  admin         Admin?
+  imobiliaria   Imobiliaria?
+  corretor      Corretor?
+  cliente       Cliente?
+
+  // Avaliações feitas pelo usuário
+  avaliacoes    Avaliacao[]  @relation("UsuarioAvaliador")
+  
+  // Relatórios relacionados ao usuário
+  relatorioDados RelatorioUsuario[] @relation("DadosUsuario")
+}
+
+model Admin {
+  id            String      @id
+  user          User        @relation(fields: [id], references: [id], onDelete: Cascade)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model Imobiliaria {
+  id            String      @id
+  user          User        @relation(fields: [id], references: [id], onDelete: Cascade)
+  telefone      String?
+  endereco      String?
+  bairro        String?
+  numero        String?
+  cidade        String?
+  estado        String?
+  cnpj          String?     @unique
+  cpf           String?     @unique
+  fotoPerfil    String?
+  
+  // Relacionamentos
+  corretores    Corretor[]  @relation("ImobiliariaCorretores")
+  clientes      Cliente[]   @relation("ImobiliariaClientes")
+  plano         Plano?      @relation(fields: [planoId], references: [id])
+  planoId       String?
+  imoveis       Imovel[]    @relation("ImobiliariaImoveis")
+  avaliacoes    Avaliacao[] @relation("ImobiliariaAvaliacoes")
+  mensagens     Mensagem[]  @relation("ImobiliariaMensagens")
+  relatorios    Relatorio[] @relation("ImobiliariaRelatorios")
+  
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model Corretor {
+  id            String      @id
+  user          User        @relation(fields: [id], references: [id], onDelete: Cascade)
+  telefone      String?
+  endereco      String?
+  bairro        String?
+  numero        String?
+  cidade        String?
+  estado        String?
+  cnpj          String?     @unique
+  cpf           String?     @unique
+  fotoPerfil    String?
+  creci         String?
+  
+  // Relacionamentos
+  imobiliaria   Imobiliaria? @relation("ImobiliariaCorretores", fields: [imobiliariaId], references: [id])
+  imobiliariaId String?
+  clientes      Cliente[]   @relation("CorretorClientes")
+  plano         Plano?      @relation(fields: [planoId], references: [id])
+  planoId       String?
+  imoveis       Imovel[]    @relation("CorretorImoveis")
+  avaliacoes    Avaliacao[] @relation("CorretorAvaliacoes")
+  mensagens     Mensagem[]  @relation("CorretorMensagens")
+  relatorios    Relatorio[] @relation("CorretorRelatorios")
+  
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model Cliente {
+  id            String      @id
+  user          User        @relation(fields: [id], references: [id], onDelete: Cascade)
+  telefone      String?
+  endereco      String?
+  bairro        String?
+  numero        String?
+  cidade        String?
+  estado        String?
+  cpf           String?     @unique
+  fotoPerfil    String?
+  
+  // Relacionamentos
+  imobiliaria   Imobiliaria? @relation("ImobiliariaClientes", fields: [imobiliariaId], references: [id])
+  imobiliariaId String?
+  corretores    Corretor[]  @relation("CorretorClientes")
+  imoveis       Imovel[]    @relation("ClienteImoveis")
+  mensagens     Mensagem[]  @relation("ClienteMensagens")
+  relatorios    RelatorioUsuario[] @relation("ClienteRelatorios")
+  
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model Categoria {
+  id            String      @id @default(uuid())
+  nome          String
+  descricao     String?
+  imoveis       Imovel[]    @relation("CategoriaImoveis")
+  
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model Imovel {
+  id            String      @id @default(uuid())
+  codigo        String      @unique
+  titulo        String
+  descricao     String
+  valor         Float
+  tipoOperacao  TipoOperacao
+  tipoImovel    TipoImovel
+  status        StatusImovel @default(ATIVO)
+  
+  // Localização
+  endereco      String
+  bairro        String
+  numero        String
+  cidade        String
+  estado        String
+  cep           String?
+  latitude      Float?
+  longitude     Float?
+  
+  // Características
+  areaTotal     Float?
+  areaConstruida Float?
+  salas         Int?
+  cozinhas      Int?
+  banheiros     Int?
+  quartos       Int?
+  suites        Int?
+  vagas         Int?
+  
+  
+  // Mídias
+  fotoPrincipal String?
+  
+  // Adicionais
+  adicionais    Adicional[] @relation("ImovelAdicionais")
+  fotos         FotoImovel[] @relation("ImovelFotos")
+  
+  // Relacionamentos
+  categorias    Categoria[] @relation("CategoriaImoveis")
+  imobiliaria   Imobiliaria? @relation("ImobiliariaImoveis", fields: [imobiliariaId], references: [id])
+  imobiliariaId String?
+  corretor      Corretor?   @relation("CorretorImoveis", fields: [corretorId], references: [id])
+  corretorId    String?
+  clientes      Cliente[]   @relation("ClienteImoveis")
+  avaliacoes    Avaliacao[] @relation("ImovelAvaliacoes")
+  
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model Adicional {
+  id            String      @id @default(uuid())
+  nome          String
+  imoveis       Imovel[]    @relation("ImovelAdicionais")
+  
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model FotoImovel {
+  id            String      @id @default(uuid())
+  url           String
+  legenda       String?
+  ordem         Int         @default(0)
+  imovel        Imovel      @relation("ImovelFotos", fields: [imovelId], references: [id], onDelete: Cascade)
+  imovelId      String
+  
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model Avaliacao {
+  id            String      @id @default(uuid())
+  titulo        String
+  descricao     String
+  nota          Int         @default(0) // 0-5
+  
+  // Quem avaliou
+  usuario       User        @relation("UsuarioAvaliador", fields: [usuarioId], references: [id])
+  usuarioId     String
+  
+  // O que foi avaliado
+  imovel        Imovel?     @relation("ImovelAvaliacoes", fields: [imovelId], references: [id])
+  imovelId      String?
+  imobiliaria   Imobiliaria? @relation("ImobiliariaAvaliacoes", fields: [imobiliariaId], references: [id])
+  imobiliariaId String?
+  corretor      Corretor?   @relation("CorretorAvaliacoes", fields: [corretorId], references: [id])
+  corretorId    String?
+  
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model Mensagem {
+  id            String      @id @default(uuid())
+  nome          String
+  email         String
+  telefone      String?
+  conteudo      String
+  lida          Boolean     @default(false)
+  respondida    Boolean     @default(false)
+  
+  // Destinatários
+  imobiliaria   Imobiliaria? @relation("ImobiliariaMensagens", fields: [imobiliariaId], references: [id])
+  imobiliariaId String?
+  corretor      Corretor?   @relation("CorretorMensagens", fields: [corretorId], references: [id])
+  corretorId    String?
+  cliente       Cliente?    @relation("ClienteMensagens", fields: [clienteId], references: [id])
+  clienteId     String?
+  
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model Plano {
+  id            String      @id @default(uuid())
+  nome          String
+  descricao     String
+  valor         Float
+  tempoDuracao  Int         // Em dias
+  dataExpiracao DateTime?
+  
+  // Benefícios do plano
+  beneficios    Beneficio[] @relation("PlanoBeneficios")
+  
+  // Quem contratou
+  imobiliarias  Imobiliaria[]
+  corretores    Corretor[]
+  
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model Beneficio {
+  id            String      @id @default(uuid())
+  descricao     String
+  planos        Plano[]     @relation("PlanoBeneficios")
+  
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model Relatorio {
+  id            String      @id @default(uuid())
+  titulo        String
+  descricao     String?
+  tipo          String      // acessos, cliques, conversas, planos, conversao
+  dadosJson     String      @db.Text // JSON com dados específicos
+  
+  // Relacionamentos
+  imobiliaria   Imobiliaria? @relation("ImobiliariaRelatorios", fields: [imobiliariaId], references: [id])
+  imobiliariaId String?
+  corretor      Corretor?   @relation("CorretorRelatorios", fields: [corretorId], references: [id])
+  corretorId    String?
+  
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+// Para armazenar dados detalhados por usuário nos relatórios
+model RelatorioUsuario {
+  id            String      @id @default(uuid())
+  tipoAcao      String      // acesso, clique, mensagem, etc
+  dados         String?     @db.Text
+  
+  // Relacionamentos
+  usuario       User        @relation("DadosUsuario", fields: [usuarioId], references: [id])
+  usuarioId     String
+  cliente       Cliente?    @relation("ClienteRelatorios", fields: [clienteId], references: [id])
+  clienteId     String?
+  
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}

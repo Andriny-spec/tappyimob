@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" fill="none">
+  <style>
+    .dashboard-bg { fill: rgba(15, 23, 42, 0.6); }
+    .card { fill: rgba(255, 255, 255, 0.05); }
+    .card-highlight { fill: rgba(16, 185, 129, 0.1); }
+    .card-border { stroke: rgba(255, 255, 255, 0.1); }
+    .card-border-highlight { stroke: rgba(16, 185, 129, 0.3); }
+    .graph-line { stroke: rgba(16, 185, 129, 0.7); }
+    .graph-dot { fill: rgba(16, 185, 129, 1); }
+    .text-light { fill: rgba(255, 255, 255, 0.7); }
+    .text-accent { fill: rgba(16, 185, 129, 1); }
+    .icon-bg { fill: rgba(16, 185, 129, 0.2); }
+    .icon { fill: rgba(16, 185, 129, 1); }
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 0.8; }
+      50% { opacity: 1; }
+    }
+    @keyframes graphLine {
+      0% { stroke-dashoffset: 500; }
+      100% { stroke-dashoffset: 0; }
+    }
+    .float-animation {
+      animation: float 6s ease-in-out infinite;
+    }
+    .pulse-animation {
+      animation: pulse 3s ease-in-out infinite;
+    }
+    .graph-line {
+      stroke-dasharray: 500;
+      stroke-dashoffset: 500;
+      animation: graphLine 3s ease-out forwards;
+    }
+  </style>
+  
+  <!-- Background Elements -->
+  <circle cx="400" cy="300" r="300" fill="url(#radial-gradient)" class="pulse-animation" />
+  <g class="float-animation">
+    <!-- Dashboard Frame -->
+    <rect x="100" y="100" width="600" height="400" rx="12" class="dashboard-bg" />
+    
+    <!-- Sidebar -->
+    <rect x="100" y="100" width="80" height="400" fill="rgba(15, 23, 42, 0.8)" />
+    
+    <!-- Sidebar Icons -->
+    <circle cx="140" cy="140" r="16" class="icon-bg" />
+    <path d="M134 140H146M140 134V146" stroke="#10B981" stroke-width="2" />
+    
+    <circle cx="140" cy="190" r="16" class="icon-bg" />
+    <path d="M134 190H146M140 184V196" stroke="#10B981" stroke-width="2" />
+    
+    <circle cx="140" cy="240" r="16" class="icon-bg" />
+    <path d="M134 240H146M140 234V246" stroke="#10B981" stroke-width="2" />
+    
+    <circle cx="140" cy="290" r="16" class="icon-bg" />
+    <path d="M134 290H146M140 284V296" stroke="#10B981" stroke-width="2" />
+    
+    <circle cx="140" cy="340" r="16" class="icon-bg" />
+    <path d="M134 340H146M140 334V346" stroke="#10B981" stroke-width="2" />
+    
+    <!-- Top Nav -->
+    <rect x="180" y="100" width="520" height="60" fill="rgba(15, 23, 42, 0.8)" />
+    <rect x="620" y="120" width="60" height="20" rx="10" class="icon-bg" />
+    
+    <!-- User Avatar -->
+    <circle cx="660" cy="130" r="12" fill="rgba(255, 255, 255, 0.2)" />
+    
+    <!-- Search Bar -->
+    <rect x="200" y="120" width="200" height="24" rx="12" fill="rgba(255, 255, 255, 0.1)" />
+    
+    <!-- Main Content Area -->
+    <!-- Welcome Card -->
+    <rect x="200" y="180" width="480" height="80" rx="8" class="card card-border-highlight" stroke-width="1" />
+    <text x="220" y="210" class="text-light" font-family="Arial" font-size="14">Bem-vindo de volta</text>
+    <text x="220" y="240" class="text-accent" font-family="Arial" font-weight="bold" font-size="18">Tappy Imob - CRM Imobiliário</text>
+    
+    <!-- Statistics Cards -->
+    <rect x="200" y="280" width="150" height="100" rx="8" class="card-highlight card-border-highlight" stroke-width="1" />
+    <text x="220" y="310" class="text-light" font-family="Arial" font-size="12">Imóveis Ativos</text>
+    <text x="220" y="340" class="text-accent" font-family="Arial" font-weight="bold" font-size="24">246</text>
+    
+    <rect x="365" y="280" width="150" height="100" rx="8" class="card card-border" stroke-width="1" />
+    <text x="385" y="310" class="text-light" font-family="Arial" font-size="12">Leads Novos</text>
+    <text x="385" y="340" class="text-accent" font-family="Arial" font-weight="bold" font-size="24">58</text>
+    
+    <rect x="530" y="280" width="150" height="100" rx="8" class="card card-border" stroke-width="1" />
+    <text x="550" y="310" class="text-light" font-family="Arial" font-size="12">Vendas (mês)</text>
+    <text x="550" y="340" class="text-accent" font-family="Arial" font-weight="bold" font-size="24">12</text>
+    
+    <!-- Graph Area -->
+    <rect x="200" y="400" width="480" height="80" rx="8" class="card card-border" stroke-width="1" />
+    
+    <!-- Simple Graph -->
+    <polyline points="220,450 280,430 340,440 400,410 460,420 520,400 580,390 640,420" class="graph-line" fill="none" stroke-width="2" />
+    <circle cx="220" cy="450" r="4" class="graph-dot" />
+    <circle cx="280" cy="430" r="4" class="graph-dot" />
+    <circle cx="340" cy="440" r="4" class="graph-dot" />
+    <circle cx="400" cy="410" r="4" class="graph-dot" />
+    <circle cx="460" cy="420" r="4" class="graph-dot" />
+    <circle cx="520" cy="400" r="4" class="graph-dot" />
+    <circle cx="580" cy="390" r="4" class="graph-dot" />
+    <circle cx="640" cy="420" r="4" class="graph-dot" />
+  </g>
+  
+  <!-- Gradient Definitions -->
+  <defs>
+    <radialGradient id="radial-gradient" cx="400" cy="300" r="300" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="rgba(16, 185, 129, 0.2)" />
+      <stop offset="100%" stop-color="rgba(15, 23, 42, 0)" />
+    </radialGradient>
+  </defs>
+</svg>
