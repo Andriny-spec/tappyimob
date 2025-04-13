@@ -458,15 +458,9 @@ export function Header() {
               <DropdownMenuLabel className="text-emerald-400">Acesso ao Sistema</DropdownMenuLabel>
               <DropdownMenuSeparator className="bg-blue-500/20" />
               <DropdownMenuItem asChild className="text-white/90 focus:bg-blue-900/50 focus:text-emerald-400">
-                <Link href="/admin/dashboard" className="w-full flex items-center gap-2">
-                  <Settings className="h-4 w-4 text-emerald-400" />
-                  Acesso Admin
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild className="text-white/90 focus:bg-blue-900/50 focus:text-emerald-400">
                 <Link href="/imobiliaria/dashboard" className="w-full flex items-center gap-2">
-                  <Building2 className="h-4 w-4 text-emerald-400" />
-                  Portal da Imobiliária
+                  <Settings className="h-4 w-4 text-emerald-400" />
+                 Portal Imobiliário
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator className="bg-blue-500/20" />

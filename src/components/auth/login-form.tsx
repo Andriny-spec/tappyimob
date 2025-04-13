@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { signIn } from 'next-auth/react';
 import { motion } from 'framer-motion';
 import { 
   KeyRound, Mail, Eye, EyeOff, 
@@ -47,18 +48,45 @@ export function LoginForm() {
     try {
       setIsLoading(true);
       
-      // Simulação de login - em um cenário real, isso seria substituído por uma chamada à API
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Usando NextAuth para autenticação
+      const result = await signIn('credentials', {
+        redirect: false,
+        email,
+        password,
+      });
+      
+      if (result?.error) {
+        throw new Error(result.error);
+      }
       
       setSuccess('Login realizado com sucesso! Redirecionando...');
       
-      // Simulação de redirecionamento após login bem-sucedido
+      // Buscar informações do usuário após login
+      const userResponse = await fetch('/api/auth/session');
+      const session = await userResponse.json();
+      
+      // Redirecionamento baseado no papel do usuário
       setTimeout(() => {
-        router.push('/dashboard');
+        // Redirecionar com base no papel (role) do usuário
+        const userRole = session?.user?.role || 'CLIENTE';
+        
+        switch(userRole) {
+          case 'IMOBILIARIA':
+            router.push('/imobiliaria/dashboard');
+            break;
+          case 'CORRETOR':
+            router.push('/corretor/dashboard');
+            break;
+          case 'ADMIN':
+            router.push('/admin/dashboard');
+            break;
+          default:
+            router.push('/dashboard');
+        }
       }, 1000);
       
-    } catch (error) {
-      setError('Ocorreu um erro ao fazer login. Por favor, tente novamente.');
+    } catch (error: any) {
+      setError(error.message || 'Ocorreu um erro ao fazer login. Por favor, tente novamente.');
       console.error('Erro de login:', error);
     } finally {
       setIsLoading(false);

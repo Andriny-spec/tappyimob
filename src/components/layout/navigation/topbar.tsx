@@ -76,7 +76,7 @@ export function Topbar({ variant, onToggleSidebar, isSidebarOpen }: TopbarProps)
       case 'admin':
         return 'bg-gradient-to-r from-[#0f172a] to-primary text-white';
       case 'imobiliaria':
-        return 'bg-gradient-to-r from-blue-600 to-blue-800 text-white';
+        return 'bg-gradient-to-r from-[#0f172a] to-primary text-white';
       case 'corretor':
         return 'bg-gradient-to-r from-purple-600 to-purple-800 text-white';
       case 'cliente':

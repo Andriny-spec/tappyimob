@@ -1,5 +1,9 @@
 import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
+import { PrismaClient } from '@prisma/client';
+import * as bcrypt from 'bcrypt';
+
+const prisma = new PrismaClient();
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -10,17 +14,44 @@ export const authOptions: NextAuthOptions = {
         password: { label: 'Senha', type: 'password' }
       },
       async authorize(credentials) {
-        // Aqui você implementará a lógica de autenticação real
-        // Este é apenas um exemplo para desenvolvimento inicial
-        if (credentials?.email === 'admin@tappyimob.com' && credentials.password === 'senha123') {
-          return {
-            id: '1',
-            name: 'Admin',
-            email: 'admin@tappyimob.com',
-            role: 'admin'
-          }
+        if (!credentials?.email || !credentials?.password) {
+          throw new Error('Credenciais incompletas');
         }
-        return null;
+
+        try {
+          // Buscar usuário no banco de dados
+          const user = await prisma.user.findUnique({
+            where: { email: credentials.email },
+            include: {
+              admin: true,
+              imobiliaria: true,
+              corretor: true,
+              cliente: true
+            }
+          });
+
+          if (!user) {
+            throw new Error('Usuário não encontrado');
+          }
+
+          // Verificar senha
+          const passwordMatch = await bcrypt.compare(credentials.password, user.senha);
+          if (!passwordMatch) {
+            throw new Error('Senha incorreta');
+          }
+
+          // Retornar dados do usuário
+          return {
+            id: user.id,
+            name: user.nome,
+            email: user.email,
+            role: user.role,
+            status: user.status
+          };
+        } catch (error: any) {
+          console.error('Erro ao autenticar:', error);
+          throw new Error(error.message || 'Erro ao autenticar');
+        }
       }
     })
   ],

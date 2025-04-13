@@ -105,17 +105,17 @@ const availablePages = [
 ];
 
 interface PagesSelectionStepProps {
-  selectedPages: string[];
+  selectedPages: string[] | undefined;
   onSelectPages: (pages: string[]) => void;
 }
 
 export const PagesSelectionStep: React.FC<PagesSelectionStepProps> = ({ 
-  selectedPages, 
+  selectedPages = [], 
   onSelectPages 
 }) => {
   // Inicializa as páginas selecionadas se estiver vazio
   React.useEffect(() => {
-    if (selectedPages.length === 0) {
+    if (!selectedPages || selectedPages.length === 0) {
       const defaultPages = availablePages
         .filter(page => page.default || page.required)
         .map(page => page.id);
@@ -146,7 +146,7 @@ export const PagesSelectionStep: React.FC<PagesSelectionStepProps> = ({
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {availablePages.map((page) => {
-          const isSelected = selectedPages.includes(page.id);
+          const isSelected = selectedPages?.includes(page.id) || false;
           return (
             <div
               key={page.id}
@@ -196,9 +196,9 @@ export const PagesSelectionStep: React.FC<PagesSelectionStepProps> = ({
       </div>
       
       <div className="mt-6 p-4 border rounded-lg bg-slate-50">
-        <h3 className="text-sm font-medium mb-2">Seu site terá {selectedPages.length} páginas</h3>
+        <h3 className="text-sm font-medium mb-2">Seu site terá {selectedPages?.length || 0} páginas</h3>
         <div className="flex flex-wrap gap-2">
-          {selectedPages.map(pageId => {
+          {(selectedPages || []).map(pageId => {
             const page = availablePages.find(p => p.id === pageId);
             return (
               <Badge key={pageId} variant="secondary" className="flex items-center gap-1">

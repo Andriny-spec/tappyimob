@@ -108,7 +108,7 @@ export function Footer() {
               <li>
                 <Link href="/buscar/em-destaque" className="text-white/80 hover:text-emerald-400 transition-colors flex items-center gap-2">
                   <Search className="h-4 w-4 text-emerald-400" />
-                  Imóveis em destaque
+                  Destaques
                 </Link>
               </li>
               <li>
@@ -140,42 +140,42 @@ export function Footer() {
           
           {/* Tipos de imóveis */}
           <div>
-            <h3 className="font-semibold text-lg mb-4 text-emerald-400 border-b border-blue-500/30 pb-2">Imóveis</h3>
+            <h3 className="font-semibold text-lg mb-4 text-emerald-400 border-b border-blue-500/30 pb-2">Funcionalidades</h3>
             <ul className="space-y-3">
               <li>
                 <Link href="/buscar/apartamentos" className="text-white/80 hover:text-emerald-400 transition-colors flex items-center gap-2">
                   <Home className="h-4 w-4 text-emerald-400" />
-                  Apartamentos
+                  Automações  
                 </Link>
               </li>
               <li>
                 <Link href="/buscar/casas" className="text-white/80 hover:text-emerald-400 transition-colors flex items-center gap-2">
                   <Home className="h-4 w-4 text-emerald-400" />
-                  Casas
+                 Agentes de I.A
                 </Link>
               </li>
               <li>
                 <Link href="/buscar/comerciais" className="text-white/80 hover:text-emerald-400 transition-colors flex items-center gap-2">
                   <Briefcase className="h-4 w-4 text-emerald-400" />
-                  Comerciais
+                  Site pronto
                 </Link>
               </li>
               <li>
                 <Link href="/buscar/terrenos" className="text-white/80 hover:text-emerald-400 transition-colors flex items-center gap-2">
                   <MapPin className="h-4 w-4 text-emerald-400" />
-                  Terrenos
+                  Kanban
                 </Link>
               </li>
               <li>
                 <Link href="/buscar/rurais" className="text-white/80 hover:text-emerald-400 transition-colors flex items-center gap-2">
                   <MapPin className="h-4 w-4 text-emerald-400" />
-                  Rurais
+                  Controles
                 </Link>
               </li>
               <li>
                 <Link href="/buscar/lancamentos" className="text-white/80 hover:text-emerald-400 transition-colors flex items-center gap-2">
                   <Building className="h-4 w-4 text-emerald-400" />
-                  Lançamentos
+                  CRM
                 </Link>
               </li>
             </ul>

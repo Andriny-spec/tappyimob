@@ -33,14 +33,21 @@ export default function MeuSitePage() {
   // Estado para armazenar as seleções do usuário
   const [websiteConfig, setWebsiteConfig] = useState({
     template: '',
-    colorScheme: '',
-    fontFamily: '',
+    templateSlug: '',
+    corPrimaria: '#25D366',
+    corSecundaria: '#F8FAFC',
+    corAcentuacao: '#FFB800',
+    corTexto: '#1A202C',
+    fonteTitulos: 'Inter',
+    fonteCorpo: 'Inter',
+    nomeSite: '',
+    subdominio: '',
+    descricao: '',
     logo: null,
-    pages: [],
-    domainType: '',
-    customDomain: '',
-    hostingType: '',
-    trainingFormat: '',
+    logoUrl: '',
+    paginas: [],
+    dominio: '',
+    dominioProprio: '',
   });
 
   const currentStep = steps[currentStepIndex];
@@ -53,17 +60,88 @@ export default function MeuSitePage() {
     }));
   };
 
-  const handleNext = () => {
-    if (currentStepIndex === steps.length - 1) {
-      // Iniciar processo de construção
+  const validarEtapaAtual = () => {
+    switch (currentStepIndex) {
+      case 0: // Template
+        return !!websiteConfig.template;
+      case 1: // Cores e fontes
+        return true; // Já tem valores padrão
+      case 2: // Logo
+        return true; // Opcional
+      case 3: // Páginas
+        return websiteConfig.paginas.length > 0;
+      case 4: // Domínio
+        return !!websiteConfig.subdominio;
+      case 5: // Treinamento
+        return true;
+      default:
+        return true;
+    }
+  };
+
+  const salvarSite = async () => {
+    try {
       setIsBuilding(true);
       
-      // Simular tempo de construção
+      // Dados para a API
+      const dados = {
+        nome: websiteConfig.nomeSite || "Site da Minha Imobiliária",
+        descricao: websiteConfig.descricao || "Site profissional para imobiliária",
+        templateId: websiteConfig.template,
+        subdominio: websiteConfig.subdominio,
+        corPrimaria: websiteConfig.corPrimaria,
+        corSecundaria: websiteConfig.corSecundaria,
+        corAcentuacao: websiteConfig.corAcentuacao,
+        corTexto: websiteConfig.corTexto,
+        fonteTitulos: websiteConfig.fonteTitulos,
+        fonteCorpo: websiteConfig.fonteCorpo,
+        logoUrl: websiteConfig.logoUrl,
+        paginasSelecionadas: websiteConfig.paginas,
+        dadosAdicionais: {
+          dominioProprio: websiteConfig.dominioProprio,
+          tom: "profissional", // Padrão para o tom da IA
+        }
+      };
+      
+      const response = await fetch('/api/imobiliaria/site', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(dados)
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Erro ao criar site');
+      }
+      
+      const resultado = await response.json();
+      console.log('Site criado com sucesso:', resultado);
+      
+      // Continuar com a animação de sucesso
       setTimeout(() => {
         setIsBuilding(false);
         setShowCompletionModal(true);
-      }, 5000);
+      }, 3000);
       
+    } catch (error) {
+      console.error('Erro ao salvar site:', error);
+      setIsBuilding(false);
+      // TODO: Mostrar mensagem de erro
+    }
+  };
+
+  const handleNext = () => {
+    // Validar etapa atual
+    if (!validarEtapaAtual()) {
+      // Exibir mensagem de erro ou destacar campos obrigatórios
+      return;
+    }
+    
+    if (currentStepIndex === steps.length - 1) {
+      // Iniciar processo de construção e salvar no banco
+      salvarSite();
       return;
     }
     
@@ -175,7 +253,10 @@ export default function MeuSitePage() {
                 >
                   <TemplateSelectionStep 
                     selected={websiteConfig.template}
-                    onSelect={value => updateConfig('template', value)}
+                    onSelect={(templateId, templateSlug) => {
+                      updateConfig('template', templateId);
+                      updateConfig('templateSlug', templateSlug);
+                    }}
                   />
                 </motion.div>
               )}
@@ -209,7 +290,12 @@ export default function MeuSitePage() {
                 >
                   <LogoSelectionStep 
                     logo={websiteConfig.logo}
-                    onSelectLogo={value => updateConfig('logo', value)}
+                    logoUrl={websiteConfig.logoUrl}
+                    nomeSite={websiteConfig.nomeSite}
+                    onSelectLogo={(value, url) => {
+                      updateConfig('logo', value);
+                      if (url) updateConfig('logoUrl', url);
+                    }}
                   />
                 </motion.div>
               )}
@@ -224,8 +310,8 @@ export default function MeuSitePage() {
                   transition={{ duration: 0.3 }}
                 >
                   <PagesSelectionStep 
-                    selectedPages={websiteConfig.pages}
-                    onSelectPages={value => updateConfig('pages', value)}
+                    selectedPages={websiteConfig.paginas}
+                    onSelectPages={value => updateConfig('paginas', value)}
                   />
                 </motion.div>
               )}

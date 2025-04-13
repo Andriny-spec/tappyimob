@@ -1,39 +1,123 @@
-import React, { useState } from 'react';
-import { Upload, Sparkles, Trash2 } from 'lucide-react';
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { Upload, Sparkles, Trash2, Loader2, RefreshCw, AlertCircle, Check } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 interface LogoSelectionStepProps {
   logo: any;
-  onSelectLogo: (logo: any) => void;
+  logoUrl?: string;
+  nomeSite?: string;
+  onSelectLogo: (logoData: any, logoUrl?: string) => void;
 }
 
 export const LogoSelectionStep: React.FC<LogoSelectionStepProps> = ({ 
   logo, 
+  logoUrl,
+  nomeSite = '',
   onSelectLogo 
 }) => {
+  // Estados para controle da geração de logo
   const [isGenerating, setIsGenerating] = useState(false);
-  const [logoName, setLogoName] = useState('');
-  const [logoDescription, setLogoDescription] = useState('');
-  const [generatedLogos, setGeneratedLogos] = useState([
-    '/images/logos/gerado-1.jpg',
-    '/images/logos/gerado-2.jpg',
-    '/images/logos/gerado-3.jpg',
-  ]);
+  const [isChecking, setIsChecking] = useState(false);
+  const [generationError, setGenerationError] = useState<string | null>(null);
+  const [generationId, setGenerationId] = useState<string | null>(null);
+  const [generatedLogos, setGeneratedLogos] = useState<{url: string, id: string}[]>([]);
   
-  // Função para simular a geração de logos com IA
-  const handleGenerateLogo = () => {
-    if (!logoName || !logoDescription) return;
+  // Estados para formulário de geração de logo
+  const [nomeImobiliaria, setNomeImobiliaria] = useState(nomeSite || '');
+  const [tipoLogo, setTipoLogo] = useState('completo');
+  const [estiloLogo, setEstiloLogo] = useState('moderno');
+  const [corLogo, setCorLogo] = useState('azul');
+  
+  // Checar o status da geração periodicamente
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout;
     
-    setIsGenerating(true);
+    if (generationId && isGenerating) {
+      // Função para verificar o status da geração
+      const checkStatus = async () => {
+        try {
+          setIsChecking(true);
+          const response = await fetch(`/api/imobiliaria/logo?generationId=${generationId}`);
+          
+          if (!response.ok) {
+            throw new Error('Erro ao verificar status da geração');
+          }
+          
+          const data = await response.json();
+          
+          // Se a geração estiver completa, parar o intervalo e mostrar as imagens
+          if (data.complete) {
+            setIsGenerating(false);
+            setGeneratedLogos(data.images || []);
+            clearInterval(intervalId);
+          }
+          
+        } catch (error) {
+          console.error('Erro ao verificar status:', error);
+          setGenerationError('Erro ao verificar o status da geração. Tente novamente.');
+          setIsGenerating(false);
+          clearInterval(intervalId);
+        } finally {
+          setIsChecking(false);
+        }
+      };
+      
+      // Verificar imediatamente e depois a cada 3 segundos
+      checkStatus();
+      intervalId = setInterval(checkStatus, 3000);
+    }
     
-    // Simulando o tempo de geração
-    setTimeout(() => {
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [generationId, isGenerating]);
+  
+  // Função para gerar logos com Leonardo AI
+  const handleGenerateLogo = async () => {
+    if (!nomeImobiliaria) {
+      setGenerationError('Preencha o nome da imobiliária');
+      return;
+    }
+    
+    try {
+      setIsGenerating(true);
+      setGenerationError(null);
+      setGeneratedLogos([]);
+      
+      const response = await fetch('/api/imobiliaria/logo', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          nomeSite: nomeImobiliaria,
+          tipo: tipoLogo,
+          estilo: estiloLogo,
+          cor: corLogo
+        })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro ao gerar logo');
+      }
+      
+      const data = await response.json();
+      setGenerationId(data.generationId);
+      
+    } catch (error: any) {
+      console.error('Erro ao gerar logo:', error);
+      setGenerationError(error.message || 'Erro ao solicitar geração de logo');
       setIsGenerating(false);
-      // Em produção, aqui seria a chamada à API de geração de imagem
-    }, 3000);
+    }
   };
   
   // Função para simular o upload de logo
@@ -54,12 +138,20 @@ export const LogoSelectionStep: React.FC<LogoSelectionStepProps> = ({
     reader.readAsDataURL(file);
   };
   
-  const handleSelectGeneratedLogo = (logoUrl: string) => {
+  const handleSelectGeneratedLogo = (logoUrl: string, logoId: string) => {
     onSelectLogo({
       type: 'generated',
       src: logoUrl,
-      name: logoName
-    });
+      id: logoId,
+      name: nomeImobiliaria
+    }, logoUrl);
+  };
+  
+  const resetGeracao = () => {
+    setGenerationId(null);
+    setIsGenerating(false);
+    setGenerationError(null);
+    setGeneratedLogos([]);
   };
   
   return (
@@ -69,7 +161,7 @@ export const LogoSelectionStep: React.FC<LogoSelectionStepProps> = ({
           <Upload className="h-4 w-4" />
           Fazer Upload
         </TabsTrigger>
-        <TabsTrigger value="ai" className="flex items-center gap-2">
+        <TabsTrigger value="ai" className="flex items-center gap-2" onClick={resetGeracao}>
           <Sparkles className="h-4 w-4" />
           Gerar com IA
         </TabsTrigger>
@@ -138,50 +230,100 @@ export const LogoSelectionStep: React.FC<LogoSelectionStepProps> = ({
         <div className="border rounded-lg p-6">
           <h3 className="text-lg font-medium mb-4">Gerar logo com Inteligência Artificial</h3>
           
-          <div className="space-y-4">
+          {generationError && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Erro ao gerar logo</AlertTitle>
+              <AlertDescription>{generationError}</AlertDescription>
+            </Alert>
+          )}
+          
+          <div className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="logoName">Nome da Imobiliária</Label>
+              <Label htmlFor="nomeImobiliaria">Nome da imobiliária</Label>
               <Input 
-                id="logoName" 
+                id="nomeImobiliaria" 
                 placeholder="Ex: Imobiliária Horizonte" 
-                value={logoName}
-                onChange={(e) => setLogoName(e.target.value)}
+                value={nomeImobiliaria}
+                onChange={(e) => setNomeImobiliaria(e.target.value)}
+                disabled={isGenerating}
               />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="logoDescription">Descreva como deseja sua logo</Label>
-              <Input 
-                id="logoDescription" 
-                placeholder="Ex: Minimalista, moderna, com tons de azul" 
-                value={logoDescription}
-                onChange={(e) => setLogoDescription(e.target.value)}
-              />
+              <Label>Tipo de logo</Label>
+              <RadioGroup 
+                value={tipoLogo} 
+                onValueChange={setTipoLogo}
+                className="flex flex-col space-y-1"
+                disabled={isGenerating}
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="completo" id="r1" />
+                  <Label htmlFor="r1" className="cursor-pointer">Completo (com nome)</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="simbolo" id="r2" />
+                  <Label htmlFor="r2" className="cursor-pointer">Apenas símbolo</Label>
+                </div>
+              </RadioGroup>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="estiloLogo">Estilo da logo</Label>
+              <Select
+                value={estiloLogo}
+                onValueChange={setEstiloLogo}
+                disabled={isGenerating}
+              >
+                <SelectTrigger id="estiloLogo">
+                  <SelectValue placeholder="Selecione um estilo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="moderno">Moderno</SelectItem>
+                  <SelectItem value="minimalista">Minimalista</SelectItem>
+                  <SelectItem value="luxo">Luxo</SelectItem>
+                  <SelectItem value="corporativo">Corporativo</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="corLogo">Cor predominante</Label>
+              <Select
+                value={corLogo}
+                onValueChange={setCorLogo}
+                disabled={isGenerating}
+              >
+                <SelectTrigger id="corLogo">
+                  <SelectValue placeholder="Selecione uma cor" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="azul">Azul</SelectItem>
+                  <SelectItem value="verde">Verde</SelectItem>
+                  <SelectItem value="vermelho">Vermelho</SelectItem>
+                  <SelectItem value="laranja">Laranja</SelectItem>
+                  <SelectItem value="roxo">Roxo</SelectItem>
+                  <SelectItem value="cinza">Cinza</SelectItem>
+                  <SelectItem value="preto">Preto</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             
             <Button 
               className="w-full" 
               onClick={handleGenerateLogo} 
-              disabled={isGenerating || !logoName || !logoDescription}
+              disabled={isGenerating || !nomeImobiliaria}
             >
               {isGenerating ? (
                 <>
-                  <span className="animate-spin mr-2">
-                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      />
-                    </svg>
-                  </span>
-                  Gerando...
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {isChecking ? 'Verificando progresso...' : 'Gerando logos...'}
                 </>
               ) : (
                 <>
                   <Sparkles className="mr-2 h-4 w-4" />
-                  Gerar Logos
+                  Gerar Logos com IA
                 </>
               )}
             </Button>
@@ -189,22 +331,42 @@ export const LogoSelectionStep: React.FC<LogoSelectionStepProps> = ({
           
           {!isGenerating && generatedLogos.length > 0 && (
             <div className="mt-6">
-              <h4 className="text-sm font-medium mb-3">
-                Sugestões de logos para "{logoName || 'Sua Imobiliária'}"
-              </h4>
-              <div className="grid grid-cols-3 gap-3">
-                {generatedLogos.map((logoUrl, index) => (
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-sm font-medium">
+                  Logos geradas para "{nomeImobiliaria}"
+                </h4>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleGenerateLogo}
+                  className="text-xs"
+                >
+                  <RefreshCw className="h-3 w-3 mr-1" />
+                  Gerar mais opções
+                </Button>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                {generatedLogos.map((img) => (
                   <div
-                    key={index}
-                    className={`border rounded-lg p-2 cursor-pointer hover:border-primary transition-all ${
-                      logo && logo.type === 'generated' && logo.src === logoUrl
+                    key={img.id}
+                    className={`border rounded-lg p-3 cursor-pointer hover:border-primary transition-all ${
+                      logo && logo.type === 'generated' && logo.id === img.id
                         ? 'ring-2 ring-primary ring-offset-2'
                         : ''
                     }`}
-                    onClick={() => handleSelectGeneratedLogo(logoUrl)}
+                    onClick={() => handleSelectGeneratedLogo(img.url, img.id)}
                   >
-                    <div className="aspect-square bg-slate-100 rounded-md flex items-center justify-center">
-                      <p className="text-xs text-center text-slate-400">Logo Exemplo {index + 1}</p>
+                    <div className="aspect-square bg-white rounded-md flex items-center justify-center overflow-hidden">
+                      {logo && logo.type === 'generated' && logo.id === img.id && (
+                        <div className="absolute top-2 right-2 bg-primary text-white rounded-full p-1 z-10">
+                          <Check className="h-3 w-3" />
+                        </div>
+                      )}
+                      <img 
+                        src={img.url} 
+                        alt={`Logo gerada para ${nomeImobiliaria}`} 
+                        className="max-h-full object-contain"
+                      />
                     </div>
                   </div>
                 ))}

@@ -104,6 +104,10 @@ model Imobiliaria {
   avaliacoes    Avaliacao[] @relation("ImobiliariaAvaliacoes")
   mensagens     Mensagem[]  @relation("ImobiliariaMensagens")
   relatorios    Relatorio[] @relation("ImobiliariaRelatorios")
+  chatsIA       ChatIA[]    @relation("ImobiliariaChatIA")
+  agentesIA     AgenteIA[]  @relation("ImobiliariaAgentes")
+  integracoesIA IntegracaoAgenteIA[] @relation("ImobiliariaIntegracoes")
+  sites         ImobiliariaSite[]
   
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
@@ -133,9 +137,82 @@ model Corretor {
   avaliacoes    Avaliacao[] @relation("CorretorAvaliacoes")
   mensagens     Mensagem[]  @relation("CorretorMensagens")
   relatorios    Relatorio[] @relation("CorretorRelatorios")
+  lembretes     Lembrete[]  // Adicionando o relacionamento com Lembrete
+  interacoes    Interacao[] // Adicionando o relacionamento com Interacao
   
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
+}
+
+enum StatusLead {
+  NOVO
+  CONTATO
+  INTERESSADO
+  VISITA
+  PROPOSTA
+  CONTRATO
+  FECHADO
+  PERDIDO
+}
+
+enum TipoLead {
+  COMPRADOR
+  VENDEDOR
+  LOCATARIO
+  LOCADOR
+  INVESTIDOR
+}
+
+enum OrigemLead {
+  SITE
+  SOCIAL_MEDIA
+  INDICACAO
+  PORTAL_IMOVEIS
+  LIGACAO
+  ANUNCIO
+  VISITA_ESCRITORIO
+  OUTROS
+}
+
+model Lembrete {
+  id            String      @id @default(uuid())
+  titulo        String
+  descricao     String?
+  dataCriacao   DateTime    @default(now())
+  dataAlerta    DateTime
+  concluido     Boolean     @default(false)
+  
+  // Relacionamentos
+  cliente       Cliente?    @relation("ClienteLembretes", fields: [clienteId], references: [id])
+  clienteId     String?
+  corretor      Corretor?   @relation(fields: [corretorId], references: [id])
+  corretorId    String?
+}
+
+model Notificacao {
+  id            String      @id @default(uuid())
+  titulo        String
+  mensagem      String
+  lida          Boolean     @default(false)
+  dataCriacao   DateTime    @default(now())
+  
+  // Relacionamentos
+  cliente       Cliente?    @relation("ClienteNotificacoes", fields: [clienteId], references: [id])
+  clienteId     String?
+}
+
+model Interacao {
+  id            String      @id @default(uuid())
+  tipo          String      // Ligação, Email, Mensagem, Visita, etc.
+  descricao     String
+  dataCriacao   DateTime    @default(now())
+  resultado     String?
+  
+  // Relacionamentos
+  cliente       Cliente     @relation("ClienteInteracoes", fields: [clienteId], references: [id])
+  clienteId     String
+  corretor      Corretor?   @relation(fields: [corretorId], references: [id])
+  corretorId    String?
 }
 
 model Cliente {
@@ -150,6 +227,25 @@ model Cliente {
   cpf           String?     @unique
   fotoPerfil    String?
   
+  // Campos CRM
+  statusLead    StatusLead? 
+  tipoLead      TipoLead?
+  origemLead    OrigemLead?
+  interesse     String?     // Tipo de imóvel que está buscando
+  orcamento     Float?      // Orçamento disponível
+  prazo         DateTime?   // Prazo para comprar/alugar
+  observacoes   String?     @db.Text
+  temperatura   Int?        // 1-5, onde 5 é lead mais quente
+  ultimoContato DateTime?
+  proximoContato DateTime?
+  corretorResponsavelId String?
+  
+  // Métricas
+  visualizacoes Int          @default(0)
+  mensagensRecebidas Int     @default(0)
+  visualizacoesImoveis Int   @default(0)
+  agendamentosRealizados Int @default(0)
+  
   // Relacionamentos
   imobiliaria   Imobiliaria? @relation("ImobiliariaClientes", fields: [imobiliariaId], references: [id])
   imobiliariaId String?
@@ -157,6 +253,9 @@ model Cliente {
   imoveis       Imovel[]    @relation("ClienteImoveis")
   mensagens     Mensagem[]  @relation("ClienteMensagens")
   relatorios    RelatorioUsuario[] @relation("ClienteRelatorios")
+  lembretes     Lembrete[]  @relation("ClienteLembretes")
+  notificacoes  Notificacao[] @relation("ClienteNotificacoes")
+  interacoes    Interacao[] @relation("ClienteInteracoes")
   
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
@@ -346,4 +445,299 @@ model RelatorioUsuario {
   
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
+}
+
+// Modelos para o sistema de chat com IA
+model ChatIA {
+  id               String          @id @default(uuid())
+  titulo           String          // Extraído da primeira pergunta
+  ultimaPergunta   String?         @db.Text
+  
+  // Relacionamentos
+  imobiliaria      Imobiliaria     @relation("ImobiliariaChatIA", fields: [imobiliariaId], references: [id])
+  imobiliariaId    String
+  mensagens        MensagemChatIA[]
+  agente           AgenteIA?       @relation(fields: [agenteId], references: [id])
+  agenteId         String?
+  
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+}
+
+model MensagemChatIA {
+  id               String      @id @default(uuid())
+  conteudo         String      @db.Text
+  remetente        String      // 'usuario' ou 'ia'
+  timestamp        DateTime    @default(now())
+  
+  // Relacionamentos
+  chat             ChatIA      @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  chatId           String
+  
+  createdAt        DateTime    @default(now())
+}
+
+// Sistema de Agentes IA
+enum StatusAgenteIA {
+  ATIVO
+  EM_TREINAMENTO
+  DESATIVADO
+  EM_REVISAO
+}
+
+enum TipoAgenteIA {
+  VENDAS
+  ATENDIMENTO
+  CONSULTORIA
+  PERSONALIZADO
+}
+
+enum TomAgenteIA {
+  FORMAL
+  INFORMAL
+  TECNICO
+  AMIGAVEL
+  DIRETO
+}
+
+model AgenteIA {
+  id                 String           @id @default(uuid())
+  nome               String
+  descricao          String           @db.Text
+  tipoAgente         TipoAgenteIA
+  tom                TomAgenteIA
+  status             StatusAgenteIA   @default(EM_TREINAMENTO)
+  promptPersonalizado String?          @db.Text
+  instrucoesGerais   String?          @db.Text
+  emoji              String?          // Emoji representativo do agente
+  cor                String?          // Cor em hexadecimal para o avatar
+  
+  // Relacionamentos
+  imobiliaria        Imobiliaria      @relation("ImobiliariaAgentes", fields: [imobiliariaId], references: [id])
+  imobiliariaId      String
+  chats              ChatIA[]
+  integracoes        IntegracaoAgenteIA[]
+  materiais          MaterialTreinamentoIA[]
+  exemplos           ExemploTreinamentoIA[]
+  
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+}
+
+// Integrações de IA com canais externos
+enum TipoIntegracao {
+  WHATSAPP
+  FACEBOOK
+  INSTAGRAM
+  SITE
+  EMAIL
+  SMS
+}
+
+enum StatusIntegracao {
+  ATIVA
+  CONFIGURANDO
+  PAUSADA
+  ERRO
+}
+
+model IntegracaoAgenteIA {
+  id               String           @id @default(uuid())
+  tipo             TipoIntegracao
+  nome             String           // Nome amigável para a integração
+  credenciais      String?          @db.Text // Credenciais em JSON (criptografadas)
+  urlWebhook       String?          // URL de callback para a integração
+  status           StatusIntegracao @default(CONFIGURANDO)
+  configuracoes    String?          @db.Text // Configurações específicas em JSON
+  
+  // Relacionamentos
+  agente           AgenteIA         @relation(fields: [agenteId], references: [id], onDelete: Cascade)
+  agenteId         String
+  imobiliaria      Imobiliaria      @relation("ImobiliariaIntegracoes", fields: [imobiliariaId], references: [id])
+  imobiliariaId    String
+  
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+}
+
+// Materiais para treinamento dos agentes
+model MaterialTreinamentoIA {
+  id               String       @id @default(uuid())
+  titulo           String
+  tipo             String       // PDF, texto, URL, etc.
+  conteudo         String?      @db.Text
+  urlArquivo       String?      // URL para arquivo externo
+  status           String       @default("PENDENTE") // PENDENTE, PROCESSADO, ERRO
+  
+  // Relacionamentos
+  agente           AgenteIA     @relation(fields: [agenteId], references: [id], onDelete: Cascade)
+  agenteId         String
+  
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+}
+
+// Exemplos de perguntas e respostas para treinamento
+model ExemploTreinamentoIA {
+  id               String       @id @default(uuid())
+  pergunta         String       @db.Text
+  resposta         String       @db.Text
+  categoria        String?      // Categorização opcional: preços, disponibilidade, etc.
+  
+  // Relacionamentos
+  agente           AgenteIA     @relation(fields: [agenteId], references: [id], onDelete: Cascade)
+  agenteId         String
+  
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+}
+
+// ========== MODELOS PARA SITES DE IMOBILIÁRIAS ==========
+
+// Enum para status do site
+enum StatusSite {
+  RASCUNHO      // Site sendo criado/editado
+  CONSTRUCAO    // Site em construção (visível ao usuário como "Em Breve")
+  PUBLICADO     // Site ativo e público
+  INATIVO       // Site temporariamente desativado pelo usuário
+}
+
+// Enum para tipos de templates disponíveis
+enum TipoTemplate {
+  MODERNO
+  TRADICIONAL
+  LUXO
+  MINIMALISTA
+  TECH
+}
+
+// Enum para tipos de página
+enum TipoPagina {
+  HOME
+  IMOVEIS
+  IMOVEL_SINGLE
+  SOBRE
+  CONTATO
+  FAQ
+  BLOG
+  PRIVACIDADE
+  TERMOS
+  CUSTOM     // Página personalizada
+}
+
+// Modelo para templates base
+model SiteTemplate {
+  id              String        @id @default(uuid())
+  nome            String
+  slug            String        @unique // identificador único para o template
+  descricao       String?
+  tipo            TipoTemplate  @default(MODERNO)
+  previewUrl      String        // URL da imagem de preview
+  destaques       String[]      // Array de características destacadas do template
+  ativo           Boolean       @default(true)
+  
+  // Relacionamentos - sites que usam este template
+  sites           ImobiliariaSite[]  @relation("TemplateSites")
+  
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+// Modelo principal para sites de imobiliárias
+model ImobiliariaSite {
+  id              String        @id @default(uuid())
+  
+  // Informações básicas
+  nome            String        // Nome do site
+  subdominio      String        @unique // ex: minhaempresa (para minhaempresa.imob.tappy.id)
+  dominioProprio  String?       // Domínio personalizado se houver (ex: www.minhaempresa.com.br)
+  descricao       String?       @db.Text // Descrição do site/empresa para SEO
+  status          StatusSite    @default(RASCUNHO)
+  
+  // Relacionamento com a imobiliária proprietária
+  imobiliaria     Imobiliaria   @relation(fields: [imobiliariaId], references: [id], onDelete: Cascade)
+  imobiliariaId   String
+  
+  // Template e configurações visuais
+  template        SiteTemplate  @relation("TemplateSites", fields: [templateId], references: [id])
+  templateId      String
+  
+  // Cores, fontes e estilo
+  corPrimaria     String        @default("#25D366") // Cor principal do site
+  corSecundaria   String        @default("#F8FAFC") // Cor secundária
+  corAcentuacao   String?       @default("#FFB800") // Cor para destaques
+  corTexto        String?       @default("#1A202C") // Cor padrão para textos
+  fonteTitulos    String        @default("Inter") // Fonte para títulos
+  fonteCorpo      String        @default("Inter") // Fonte para corpo de texto
+  
+  // Recursos de marca e identidade visual
+  logoUrl         String?       // URL do logotipo
+  faviconUrl      String?       // URL do favicon
+  bannerPrincipal String?       // Banner para o hero da home
+  
+  // Contato e redes sociais
+  whatsapp        String?
+  email           String?
+  telefone        String?
+  facebook        String?
+  instagram       String?
+  youtube         String?
+  linkedin        String?
+  endereco        String?       @db.Text
+  
+  // Configurações de SEO e comportamento
+  metaTitulo      String?
+  metaDescricao   String?       @db.Text
+  googleAnalytics String?
+  pixelFacebook   String?
+  scriptExterno   String?       @db.Text // Para códigos de rastreamento adicionais
+  
+  // Relação com as páginas do site
+  paginas         ImobiliariaSitePagina[] @relation("SitePaginas")
+  
+  // Datas de controle
+  criadoEm        DateTime      @default(now())
+  atualizadoEm    DateTime      @updatedAt
+  publicadoEm     DateTime?
+}
+
+// Modelo para páginas do site
+model ImobiliariaSitePagina {
+  id              String          @id @default(uuid())
+  
+  // Informações básicas da página
+  titulo          String
+  slug            String          // URL amigável da página (ex: "sobre-nos")
+  tipo            TipoPagina      // Tipo pré-definido da página
+  ativa           Boolean         @default(true)
+  ordem           Int             @default(0) // Ordem no menu de navegação
+  exibirNoMenu    Boolean         @default(true) // Se deve aparecer no menu principal
+  exibirNoRodape  Boolean         @default(false) // Se deve aparecer no rodapé
+  
+  // Conteúdo da página (estrutura específica para cada tipo de página)
+  conteudo        Json?           // Armazena seções, componentes e configurações da página
+  
+  // SEO específico da página
+  metaTitulo      String?
+  metaDescricao   String?         @db.Text
+  imagemShare     String?         // Imagem para compartilhamento em redes sociais
+  
+  // Relacionamento com o site
+  site            ImobiliariaSite @relation("SitePaginas", fields: [siteId], references: [id], onDelete: Cascade)
+  siteId          String
+  
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  
+  @@unique([siteId, slug]) // Garante que não haja slugs duplicados dentro do mesmo site
+}
+
+// Configurações do sistema de sites
+model ImobiliariaSiteConfig {
+  id                   String   @id @default(uuid())
+  limitePublicacoesFree Int      @default(1)   // Quantos sites uma imobiliária free pode publicar
+  maxWhitelabelPorPlano Json     // JSON com limites por tipo de plano {"BASICO": 1, "PRO": 5, etc}
+  dominioPadrao        String   @default("imob.tappy.id") // Domínio base para os subdomínios
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 }

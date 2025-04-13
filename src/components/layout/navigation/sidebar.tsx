@@ -90,64 +90,67 @@ export function Sidebar({ variant, isOpen, onToggle }: SidebarProps) {
           { title: 'Imobiliárias', icon: <Building2 className="h-5 w-5" />, href: '/admin/dashboard/imobiliarias' },
           { title: 'Planos', icon: <LayoutGrid className="h-5 w-5" />, href: '/admin/dashboard/planos' },
           { title: 'Integrações', icon: <ExternalLink className="h-5 w-5" />, href: '/admin/dashboard/integracoes' },
-          { title: 'Automações', icon: <Zap className="h-5 w-5" />, href: '/admin/dashboard/automacoes' },
           { 
             title: 'Tappy I.A', 
-            icon: <Bot className="h-5 w-5" />, 
+            icon: <Bot className="h-4 w-4" />, 
             href: '/admin/dashboard/tappyia',
             isNew: true 
           },
-          { title: 'Relatórios', icon: <BarChart4 className="h-5 w-5" />, href: '/admin/dashboard/relatorios' },
-          { title: 'Páginas', icon: <FileText className="h-5 w-5" />, href: '/admin/dashboard/paginas' },
-          { title: 'Blog', icon: <BookOpen className="h-5 w-5" />, href: '/admin/dashboard/blog' },
-          { title: 'Configuração', icon: <Settings className="h-5 w-5" />, href: '/admin/dashboard/configuracao' },
+          { title: 'Relatórios', icon: <BarChart4 className="h-4 w-4" />, href: '/admin/dashboard/relatorios' },
+          { title: 'Páginas', icon: <FileText className="h-4 w-4" />, href: '/admin/dashboard/paginas' },
+          { title: 'Blog', icon: <BookOpen className="h-4 w-4" />, href: '/admin/dashboard/blog' },
+          { title: 'Configuração', icon: <Settings className="h-4 w-4" />, href: '/admin/dashboard/configuracao' },
         ];
 
       case 'imobiliaria':
         return [
-          { title: 'Visão Geral', icon: <Gauge className="h-5 w-5" />, href: '/imobiliaria/dashboard' },
-          { title: 'Imóveis', icon: <Building2 className="h-5 w-5" />, href: '/imobiliaria/dashboard/imoveis' },
-          { title: 'Corretores', icon: <Briefcase className="h-5 w-5" />, href: '/imobiliaria/dashboard/corretores' },
-          { title: 'Clientes', icon: <Users className="h-5 w-5" />, href: '/imobiliaria/dashboard/clientes' },
+          { title: 'Visão Geral', icon: <Gauge className="h-4 w-4" />, href: '/imobiliaria/dashboard' },
+          { title: 'Imóveis', icon: <Building2 className="h-4 w-4" />, href: '/imobiliaria/dashboard/imoveis' },
+          { title: 'Corretores', icon: <Briefcase className="h-4 w-4" />, href: '/imobiliaria/dashboard/corretores' },
+          { title: 'Clientes', icon: <Users className="h-4 w-4" />, href: '/imobiliaria/dashboard/clientes' },
           { 
             title: 'Tappy I.A', 
-            icon: <Bot className="h-5 w-5" />, 
+            icon: <Bot className="h-4 w-4" />, 
             href: '/imobiliaria/dashboard/tappyia',
             isNew: true 
-          },{ 
+          },
+          { 
+            title: 'Meu Site', 
+            icon: <Zap   className="h-4 w-4" />, 
+            href: '/imobiliaria/dashboard/meusite',
+            badge: { text: 'Premium', variant: 'success' }
+          },
+          { 
             title: 'Meu Plano', 
-            icon: <CreditCard className="h-5 w-5" />, 
+            icon: <CreditCard className="h-4 w-4" />, 
             href: '/imobiliaria/dashboard/plano',
             badge: { text: 'Premium', variant: 'success' }
           },
-          { title: 'Integrações', icon: <ExternalLink className="h-5 w-5" />, href: '/imobiliaria/dashboard/integracoes' },
-          { title: 'Mensagens', icon: <MessagesSquare className="h-5 w-5" />, href: '/imobiliaria/dashboard/mensagens' },
-          { title: 'Avaliações', icon: <Star className="h-5 w-5" />, href: '/imobiliaria/dashboard/avaliacoes' },
-          { title: 'Automações', icon: <Zap className="h-5 w-5" />, href: '/imobiliaria/dashboard/automacoes' },
-          { title: 'Meu site', icon: <Zap className="h-5 w-5" />, href: '/imobiliaria/dashboard/meusite' },
-          { title: 'Relatórios', icon: <BarChart4 className="h-5 w-5" />, href: '/imobiliaria/dashboard/relatorios' },
+          { title: 'Mensagens', icon: <MessagesSquare className="h-4 w-4" />, href: '/imobiliaria/dashboard/mensagens' },
+          { title: 'Avaliações', icon: <Star className="h-4 w-4" />, href: '/imobiliaria/dashboard/avaliacoes' },
+          { title: 'Relatórios', icon: <BarChart4 className="h-4 w-4" />, href: '/imobiliaria/dashboard/relatorios' },
          
-          { title: 'Configuração', icon: <Settings className="h-5 w-5" />, href: '/imobiliaria/dashboard/configuracao' },
+          { title: 'Configuração', icon: <Settings className="h-4 w-4" />, href: '/imobiliaria/dashboard/configuracao' },
         ];
         
       case 'corretor':
         return [
-          { title: 'Visão Geral', icon: <Gauge className="h-5 w-5" />, href: '/corretor/dashboard' },
-          { title: 'Imóveis', icon: <Building2 className="h-5 w-5" />, href: '/corretor/dashboard/imoveis' },
-          { title: 'Clientes', icon: <Users className="h-5 w-5" />, href: '/corretor/dashboard/clientes' },
-          { title: 'Avaliações', icon: <Star className="h-5 w-5" />, href: '/corretor/dashboard/avaliacoes' },
-          { title: 'Mensagens', icon: <MessagesSquare className="h-5 w-5" />, href: '/corretor/dashboard/mensagens' },
-          { title: 'Relatórios', icon: <BarChart4 className="h-5 w-5" />, href: '/corretor/dashboard/relatorios' },
-          { title: 'Configuração', icon: <Settings className="h-5 w-5" />, href: '/corretor/dashboard/configuracao' },
+          { title: 'Visão Geral', icon: <Gauge className="h-4 w-4" />, href: '/corretor/dashboard' },
+          { title: 'Imóveis', icon: <Building2 className="h-4 w-4" />, href: '/corretor/dashboard/imoveis' },
+          { title: 'Clientes', icon: <Users className="h-4 w-4" />, href: '/corretor/dashboard/clientes' },
+          { title: 'Avaliações', icon: <Star className="h-4 w-4" />, href: '/corretor/dashboard/avaliacoes' },
+          { title: 'Mensagens', icon: <MessagesSquare className="h-4 w-4" />, href: '/corretor/dashboard/mensagens' },
+          { title: 'Relatórios', icon: <BarChart4 className="h-4 w-4" />, href: '/corretor/dashboard/relatorios' },
+          { title: 'Configuração', icon: <Settings className="h-4 w-4" />, href: '/corretor/dashboard/configuracao' },
         ];
         
       case 'cliente':
         return [
-          { title: 'Visão Geral', icon: <Gauge className="h-5 w-5" />, href: '/cliente/dashboard' },
-          { title: 'Meus Imóveis', icon: <Building2 className="h-5 w-5" />, href: '/cliente/dashboard/imoveis' },
-          { title: 'Contratos', icon: <FileText className="h-5 w-5" />, href: '/cliente/dashboard/contratos' },
-          { title: 'Mensagens', icon: <MessagesSquare className="h-5 w-5" />, href: '/cliente/dashboard/mensagens' },
-          { title: 'Suporte', icon: <HelpCircle className="h-5 w-5" />, href: '/cliente/dashboard/suporte' },
+          { title: 'Visão Geral', icon: <Gauge className="h-4 w-4" />, href: '/cliente/dashboard' },
+          { title: 'Meus Imóveis', icon: <Building2 className="h-4 w-4" />, href: '/cliente/dashboard/imoveis' },
+          { title: 'Contratos', icon: <FileText className="h-4 w-4" />, href: '/cliente/dashboard/contratos' },
+          { title: 'Mensagens', icon: <MessagesSquare className="h-4 w-4" />, href: '/cliente/dashboard/mensagens' },
+          { title: 'Suporte', icon: <HelpCircle className="h-4 w-4" />, href: '/cliente/dashboard/suporte' },
         ];
         
       default:
@@ -227,7 +230,7 @@ export function Sidebar({ variant, isOpen, onToggle }: SidebarProps) {
                   <Link
                     href={item.href}
                     className={cn(
-                      "flex items-center px-3 py-2.5 rounded-md gap-3 text-sm font-medium transition-all",
+                      "flex items-center px-3 py-2.5 rounded-md gap-3 text-xs font-medium transition-all",
                       colors.text,
                       isItemActive ? colors.active : colors.hover,
                       isItemHovered && !isItemActive && "bg-opacity-10",
@@ -255,7 +258,7 @@ export function Sidebar({ variant, isOpen, onToggle }: SidebarProps) {
                           initial={{ opacity: 0, width: 0 }}
                           animate={{ opacity: 1, width: "auto" }}
                           exit={{ opacity: 0, width: 0 }}
-                          className="flex-1 whitespace-nowrap overflow-hidden"
+                          className="flex-1 whitespace-nowrap overflow-hidden text-xs"
                         >
                           {item.title}
                         </motion.span>
@@ -335,14 +338,14 @@ export function Sidebar({ variant, isOpen, onToggle }: SidebarProps) {
                   key={subItem.title}
                   href={subItem.href}
                   className={cn(
-                    "flex items-center px-3 py-2 rounded-md text-sm font-medium transition-all",
+                    "flex items-center px-3 py-2 rounded-md text-xs font-medium transition-all",
                     isActive(subItem.href) 
                       ? colors.active 
                       : `text-muted-foreground ${colors.hover}`
                   )}
                 >
                   {subItem.icon}
-                  <span className="ml-2">{subItem.title}</span>
+                  <div className="text-xs font-medium leading-none text-muted-foreground">{subItem.title}</div>
                 </Link>
               ))}
             </motion.div>
@@ -379,11 +382,11 @@ export function Sidebar({ variant, isOpen, onToggle }: SidebarProps) {
                   <Link
                     href="/auth/logout"
                     className={cn(
-                      "flex items-center px-3 py-2.5 rounded-md gap-3 text-sm font-medium transition-all",
+                      "flex items-center px-3 py-2.5 rounded-md gap-3 text-xs font-medium transition-all",
                       "text-red-500 hover:bg-red-500/10 group"
                     )}
                   >
-                    <LogOut className="h-5 w-5" />
+                    <LogOut className="h-4 w-4" />
                     
                     <AnimatePresence>
                       {isOpen && (
