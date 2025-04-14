@@ -826,20 +826,49 @@ export default function TappyIAPage() {
                         // Obter contexto de consultas anteriores
                         const contextoConsultas = { ...resultadosConsultas };
                         
-                        // Fazer a chamada para a API
-                        const response = await fetch('/api/ia', {
-                          method: 'POST',
-                          headers: {
-                            'Content-Type': 'application/json'
-                          },
-                          body: JSON.stringify({
-                            mensagem: mensagemTexto,
-                            contexto: contextoConsultas
-                          })
-                        });
+                        // Fazer a chamada para a API com retry
+                        let response;
+                        let tentativas = 0;
+                        const maxTentativas = 3;
                         
-                        if (!response.ok) {
-                          throw new Error(`Erro na API: ${response.statusText}`);
+                        while (tentativas < maxTentativas) {
+                          try {
+                            console.log(`Tentativa ${tentativas + 1} de ${maxTentativas} para chamar a API de IA`);
+                            
+                            response = await fetch('/api/ia', {
+                              method: 'POST',
+                              headers: {
+                                'Content-Type': 'application/json'
+                              },
+                              body: JSON.stringify({
+                                mensagem: mensagemTexto,
+                                contexto: contextoConsultas
+                              })
+                            });
+                            
+                            if (response.ok) {
+                              break; // Se a resposta for bem-sucedida, saímos do loop
+                            } else {
+                              console.error(`Tentativa ${tentativas + 1} falhou com status: ${response.status}`);
+                              // Se ainda temos tentativas, vamos esperar antes de tentar novamente
+                              if (tentativas < maxTentativas - 1) {
+                                await new Promise(resolve => setTimeout(resolve, 1000)); // Espera 1 segundo
+                              }
+                            }
+                          } catch (error) {
+                            console.error(`Erro na tentativa ${tentativas + 1}:`, error);
+                            // Se ainda temos tentativas, vamos esperar antes de tentar novamente
+                            if (tentativas < maxTentativas - 1) {
+                              await new Promise(resolve => setTimeout(resolve, 1000)); // Espera 1 segundo
+                            }
+                          }
+                          
+                          tentativas++;
+                        }
+                        
+                        // Após todas as tentativas, verificamos se tivemos sucesso
+                        if (!response || !response.ok) {
+                          throw new Error(`Erro na API após ${maxTentativas} tentativas`);
                         }
                         
                         const data = await response.json();
