@@ -126,7 +126,7 @@ export function Sidebar({ variant, isOpen, onToggle }: SidebarProps) {
             href: '/imobiliaria/dashboard/plano',
             badge: { text: 'Premium', variant: 'success' }
           },
-          { title: 'Mensagens', icon: <MessagesSquare className="h-4 w-4" />, href: '/imobiliaria/dashboard/mensagens' },
+          { title: 'Integrações', icon: <MessagesSquare className="h-4 w-4" />, href: '/imobiliaria/dashboard/integracoes' },
           { title: 'Avaliações', icon: <Star className="h-4 w-4" />, href: '/imobiliaria/dashboard/avaliacoes' },
           { title: 'Relatórios', icon: <BarChart4 className="h-4 w-4" />, href: '/imobiliaria/dashboard/relatorios' },
          
@@ -230,7 +230,7 @@ export function Sidebar({ variant, isOpen, onToggle }: SidebarProps) {
                   <Link
                     href={item.href}
                     className={cn(
-                      "flex items-center px-3 py-2.5 rounded-md gap-3 text-xs font-medium transition-all",
+                      "flex items-center px-4 py-3 rounded-md gap-2 text-xs font-medium transition-all",
                       colors.text,
                       isItemActive ? colors.active : colors.hover,
                       isItemHovered && !isItemActive && "bg-opacity-10",
@@ -382,7 +382,7 @@ export function Sidebar({ variant, isOpen, onToggle }: SidebarProps) {
                   <Link
                     href="/auth/logout"
                     className={cn(
-                      "flex items-center px-3 py-2.5 rounded-md gap-3 text-xs font-medium transition-all",
+                      "flex items-center px-4 py-3.5 rounded-md gap-3 text-xs font-medium transition-all",
                       "text-red-500 hover:bg-red-500/10 group"
                     )}
                   >

@@ -1,0 +1,8 @@
+import React from 'react';
+import { ImovelSingle as ImovelSinglePart1 } from '../single/imovel-single-1';
+import { MapComponent } from '../single/imovel-single-2';
+
+// Re-exportamos o componente completo (unifica as partes)
+export function ImovelSingle(props: React.ComponentProps<typeof ImovelSinglePart1>) {
+  return <ImovelSinglePart1 {...props} />;
+}

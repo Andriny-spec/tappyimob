@@ -1,0 +1,59 @@
+// Este é um trecho para adicionar ao schema.prisma existente
+
+// Modelo para análises e métricas do site
+model ImobiliariaSiteAnalytics {
+  id                String      @id @default(uuid())
+  imobiliariaSiteId String
+  imobiliariaSite   ImobiliariaSite @relation(fields: [imobiliariaSiteId], references: [id], onDelete: Cascade)
+  
+  // Métricas de tráfego
+  visitasTotal       Int         @default(0)
+  visitasUnicas      Int         @default(0)
+  visitasPorPagina   Json?       // {"home": 500, "imoveis": 300, etc}
+  
+  // Métricas de comportamento
+  tempoMedioPagina   Float       @default(0) // em segundos
+  taxaRejeicao       Float       @default(0) // em porcentagem
+  
+  // Métricas de conversão
+  cliquesContato     Int         @default(0)
+  cliquesTelefone    Int         @default(0)
+  cliquesWhatsapp    Int         @default(0)
+  visualizacoesDetalhes Int      @default(0)
+  
+  // Métricas de dispositivos
+  dispositivosAcesso Json?       // {"desktop": 60, "mobile": 35, "tablet": 5} em porcentagem
+  navegadores        Json?       // {"chrome": 65, "safari": 20, etc} em porcentagem
+  
+  // Métricas por imóvel
+  imoveisVisualizacoes Json?    // {"imovelId1": 300, "imovelId2": 250} etc
+  imoveisCliques     Json?       // {"imovelId1": 50, "imovelId2": 30} etc
+  
+  // Dados agregados por período
+  dadosDiarios      Json?       // Dados dos últimos 30 dias no formato {data: "2025-04-01", visitas: 50, ...}
+  dadosSemanais     Json?       // Dados das últimas 12 semanas
+  dadosMensais      Json?       // Dados dos últimos 12 meses
+  
+  // Métricas de origem do tráfego
+  origemTrafego     Json?       // {"direto": 40, "busca": 35, "social": 15, "referencia": 10} em porcentagem
+  
+  updatedAt         DateTime    @updatedAt
+  createdAt         DateTime    @default(now())
+}
+
+// Modelo para registrar eventos individuais de análise (opcional, para dados mais granulares)
+model SiteEvent {
+  id                String      @id @default(uuid())
+  imobiliariaSiteId String
+  imobiliariaSite   ImobiliariaSite @relation(fields: [imobiliariaSiteId], references: [id], onDelete: Cascade)
+  
+  tipo              String      // "pageview", "click", "formSubmit", etc
+  pagina            String      // URL da página onde ocorreu o evento
+  imovelId          String?     // ID do imóvel, se aplicável
+  ip                String?     // IP do visitante (anonimizado)
+  userAgent         String?     // Browser/OS do visitante
+  referer           String?     // De onde o visitante veio
+  data              Json?       // Dados adicionais sobre o evento
+  
+  createdAt         DateTime    @default(now())
+}

@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useTheme } from 'next-themes';
 import { useSession, signOut } from 'next-auth/react';
 import { 
-  Bell, 
   User, 
   Sun, 
   Moon, 
@@ -27,6 +26,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { NotificationsDrawer } from '@/components/dashboard/notifications-drawer';
 
 type TopbarProps = {
   variant: 'admin' | 'imobiliaria' | 'corretor' | 'cliente';
@@ -38,10 +38,7 @@ export function Topbar({ variant, onToggleSidebar, isSidebarOpen }: TopbarProps)
   const { data: session } = useSession();
   const { theme, setTheme } = useTheme();
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [notifications, setNotifications] = useState<{ id: string; title: string; description: string; isRead: boolean }[]>([
-    { id: '1', title: 'Nova mensagem', description: 'Você recebeu uma nova mensagem', isRead: false },
-    { id: '2', title: 'Atualização', description: 'Sistema atualizado para a versão 2.0', isRead: false }
-  ]);
+
 
   // Verificar o modo de tela cheia
   useEffect(() => {
@@ -127,42 +124,8 @@ export function Topbar({ variant, onToggleSidebar, isSidebarOpen }: TopbarProps)
       
       {/* Lado Direito: Ícones e Menu do Usuário */}
       <div className="flex items-center space-x-2">
-        {/* Notificações */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="relative text-white hover:bg-white/20">
-              <Bell className="h-5 w-5" />
-              {notifications.some(n => !n.isRead) && (
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
-              )}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-80">
-            <DropdownMenuLabel>Notificações</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            {notifications.length === 0 ? (
-              <div className="px-2 py-4 text-center text-muted-foreground">
-                Nenhuma notificação
-              </div>
-            ) : (
-              <div className="max-h-96 overflow-auto">
-                {notifications.map((notification) => (
-                  <DropdownMenuItem key={notification.id} className={cn(
-                    "flex flex-col items-start p-3 cursor-pointer",
-                    !notification.isRead && "bg-muted/50"
-                  )}>
-                    <div className="font-medium text-sm">{notification.title}</div>
-                    <div className="text-xs text-muted-foreground mt-1">{notification.description}</div>
-                  </DropdownMenuItem>
-                ))}
-              </div>
-            )}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem className="justify-center text-primary">
-              Ver todas
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {/* Notificações - Painel Lateral Sofisticado */}
+        <NotificationsDrawer />
         
         {/* Alternar Tema */}
         <Button 

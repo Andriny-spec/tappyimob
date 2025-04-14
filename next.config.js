@@ -5,6 +5,9 @@ const nextConfig = {
   experimental: {
     // Configurações experimentais
   },
+  images: {
+    domains: ['placehold.co']
+  },
   // Ignorar pasta da lixeira e outros diretórios problemáticos
   webpack: (config, { isServer }) => {
     config.watchOptions = {

@@ -5,15 +5,23 @@ import { motion } from 'framer-motion';
 
 interface CompletionModalProps {
   config: {
-    template: string;
-    colorScheme: string;
-    fontFamily: string;
-    logo: any;
-    pages: string[];
-    domainType: string;
-    customDomain: string;
-    hostingType: string;
-    trainingFormat: string;
+    template?: string;
+    templateSlug?: string;
+    colorScheme?: string;
+    fontFamily?: string;
+    corPrimaria?: string;
+    corSecundaria?: string;
+    logo?: any;
+    logoUrl?: string;
+    pages?: string[];
+    paginas?: string[];
+    domainType?: string;
+    customDomain?: string;
+    dominio?: string;
+    subdominio?: string;
+    dominioProprio?: string;
+    hostingType?: string;
+    trainingFormat?: string;
   };
 }
 
@@ -25,27 +33,34 @@ export const CompletionModal: React.FC<CompletionModalProps> = ({ config }) => {
     // Preço base pelo template
     basePrice += 250;
     
-    // Adicional por páginas extras (além das 5 básicas)
-    const extraPages = Math.max(0, config.pages.length - 5);
+    // Verificar se temos páginas para calcular o adicional
+    const pages = config.paginas || config.pages || [];
+    const extraPages = Math.max(0, pages.length - 5);
     basePrice += extraPages * 50;
     
     // Adicional para domínio personalizado
-    if (config.domainType === 'custom') {
+    if (config.dominioProprio || config.domainType === 'custom') {
       basePrice += 90; // Custo anual do domínio
     }
     
-    // Adicional para hospedagem gerenciada
-    if (config.hostingType === 'managed') {
-      basePrice += 50; // Custo mensal da hospedagem
-    }
+    // Adicional para hospedagem gerenciada (padrão para sim)
+    basePrice += 50; // Custo mensal da hospedagem
     
     return basePrice;
   };
   
   const price = calculatePrice();
-  const domain = config.domainType === 'custom' 
-    ? config.customDomain || 'seudominio.com.br'
-    : 'suaimobiliaria.tappy.imob.br';
+  
+  // Determinar o domínio a ser exibido
+  let domain = 'imob.tappy.id/exemplo/home';
+  
+  if (config.dominioProprio) {
+    domain = config.dominioProprio || 'seudominio.com.br';
+  } else if (config.subdominio) {
+    domain = `${config.subdominio}.tappy.imob.br`;
+  } else if (config.domainType === 'custom') {
+    domain = config.customDomain || 'seudominio.com.br';
+  }
   
   return (
     <div className="space-y-8">
@@ -78,6 +93,20 @@ export const CompletionModal: React.FC<CompletionModalProps> = ({ config }) => {
           <div className="mt-2 mb-6">
             <span className="font-medium text-primary">https://{domain}</span>
           </div>
+          
+          <div className="flex flex-col sm:flex-row gap-3 justify-center mt-4">
+            <Button 
+              onClick={() => {
+                // Link para visualização local do site (usando a nova estrutura de rotas)
+                const subdomain = config.subdominio || 'exemplo';
+                window.open(`/${subdomain}/home`, '_blank');
+              }}
+              className="gap-2"
+            >
+              <ExternalLink className="h-4 w-4" />
+              Ver meu site agora
+            </Button>
+          </div>
         </motion.div>
       </div>
       
@@ -87,31 +116,56 @@ export const CompletionModal: React.FC<CompletionModalProps> = ({ config }) => {
           <ul className="space-y-2 text-sm">
             <li className="flex justify-between">
               <span className="text-slate-500">Template escolhido:</span>
-              <span className="font-medium">{config.template.charAt(0).toUpperCase() + config.template.slice(1)}</span>
+              <span className="font-medium">
+                {config.templateSlug || config.template ? 
+                  (config.templateSlug || config.template || 'Padrão').charAt(0).toUpperCase() + 
+                  (config.templateSlug || config.template || 'Padrão').slice(1) : 
+                  'Moderno'
+                }
+              </span>
             </li>
             <li className="flex justify-between">
-              <span className="text-slate-500">Esquema de cores:</span>
-              <span className="font-medium">{config.colorScheme.charAt(0).toUpperCase() + config.colorScheme.slice(1)}</span>
+              <span className="text-slate-500">Cor primária:</span>
+              <span className="font-medium">
+                {config.corPrimaria || 
+                  (config.colorScheme ? 
+                    config.colorScheme.charAt(0).toUpperCase() + config.colorScheme.slice(1) : 
+                    'Verde')
+                }
+              </span>
             </li>
             <li className="flex justify-between">
               <span className="text-slate-500">Fonte principal:</span>
-              <span className="font-medium">{config.fontFamily.charAt(0).toUpperCase() + config.fontFamily.slice(1)}</span>
+              <span className="font-medium">
+                {config.fontFamily ? 
+                  config.fontFamily.charAt(0).toUpperCase() + config.fontFamily.slice(1) : 
+                  'Inter'
+                }
+              </span>
             </li>
             <li className="flex justify-between">
               <span className="text-slate-500">Número de páginas:</span>
-              <span className="font-medium">{config.pages.length} páginas</span>
+              <span className="font-medium">
+                {(config.paginas?.length || config.pages?.length || 5)} páginas
+              </span>
             </li>
             <li className="flex justify-between">
-              <span className="text-slate-500">Tipo de domínio:</span>
-              <span className="font-medium">{config.domainType === 'subdomain' ? 'Subdomínio' : 'Personalizado'}</span>
+              <span className="text-slate-500">Domínio:</span>
+              <span className="font-medium">
+                {config.dominioProprio ? 'Personalizado' : 
+                 (config.subdominio ? 'Subdomínio' : 
+                 (config.domainType === 'custom' ? 'Personalizado' : 'Subdomínio'))}
+              </span>
             </li>
             <li className="flex justify-between">
-              <span className="text-slate-500">Tipo de hospedagem:</span>
-              <span className="font-medium">{config.hostingType === 'managed' ? 'Tappy Gerenciada' : 'Externa'}</span>
+              <span className="text-slate-500">Hospedagem:</span>
+              <span className="font-medium">Tappy Gerenciada</span>
             </li>
             <li className="flex justify-between">
               <span className="text-slate-500">Formato de treinamento:</span>
-              <span className="font-medium">{config.trainingFormat === 'video' ? 'Vídeos' : 'Texto'}</span>
+              <span className="font-medium">
+                {config.trainingFormat === 'video' ? 'Vídeos' : 'Texto e Vídeos'}
+              </span>
             </li>
           </ul>
         </div>
