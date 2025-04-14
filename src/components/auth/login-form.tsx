@@ -276,17 +276,7 @@ export function LoginForm() {
           </div>
         </CardContent>
         
-        <CardFooter className="text-sm text-center border-t bg-slate-50 py-4">
-          <p className="w-full">
-            Não tem uma conta?{" "}
-            <Link 
-              href="/cadastro" 
-              className="font-medium text-emerald-600 hover:text-emerald-800 hover:underline transition-colors"
-            >
-              Criar conta grátis
-            </Link>
-          </p>
-        </CardFooter>
+     
       </Card>
       
       <div className="text-center mt-6 space-y-2">
