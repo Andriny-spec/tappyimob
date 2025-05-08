@@ -14,7 +14,7 @@ const nextConfig = {
     // Configurações experimentais
   },
   images: {
-    domains: ['placehold.co']
+    domains: ['placehold.co', 'images.unsplash.com', 'randomuser.me']
   },
   // Ignorar pasta da lixeira e outros diretórios problemáticos
   webpack: (config, { isServer }) => {

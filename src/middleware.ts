@@ -31,7 +31,7 @@ export async function middleware(request: NextRequest) {
           return NextResponse.redirect(new URL('/imobiliaria/dashboard', request.url));
         case 'CORRETOR':
           return NextResponse.redirect(new URL('/corretor/dashboard', request.url));
-        case 'CLIENTE':
+        case 'IMOBILIARIA':
           return NextResponse.redirect(new URL('/cliente/dashboard', request.url));
         default:
           return NextResponse.redirect(new URL('/', request.url));
@@ -49,7 +49,7 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(new URL('/imobiliaria/dashboard', request.url));
       case 'CORRETOR':
         return NextResponse.redirect(new URL('/corretor/dashboard', request.url));
-      case 'CLIENTE':
+      case 'IMOBILIARIA':
         return NextResponse.redirect(new URL('/cliente/dashboard', request.url));
       default:
         return NextResponse.redirect(new URL('/', request.url));

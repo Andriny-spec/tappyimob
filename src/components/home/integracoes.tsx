@@ -230,8 +230,8 @@ async function criarLead(dados) {
                 <Button className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white">
                   Documentação da API
                 </Button>
-                <Button variant="outline" className="border-white/10 text-white/80 hover:bg-white/5">
-                  Exemplos de Código
+                <Button variant="outline" className="border-white/10 bg-black/5 text-white/80 hover:bg-black/5">
+                  Exemplos de Códigos
                 </Button>
               </div>
             </div>
@@ -277,7 +277,7 @@ console.log(\`Lead \${lead.id} criado com sucesso!\`);`}
           className="text-center mt-24"
         >
           <h3 className="text-2xl font-bold text-white mb-8">
-            Nossos Parceiros e Integrações
+            Nossas Vantagens e Integrações
           </h3>
           
           <div className="flex flex-wrap justify-center items-center gap-8 max-w-4xl mx-auto">
@@ -286,7 +286,7 @@ console.log(\`Lead \${lead.id} criado com sucesso!\`);`}
                 key={i} 
                 className="w-32 h-16 bg-white/5 rounded-lg border border-white/10 flex items-center justify-center p-4 grayscale opacity-60 hover:grayscale-0 hover:opacity-100 transition-all cursor-pointer"
               >
-                <div className="text-white font-semibold">Logo {i+1}</div>
+                <div className="text-white font-semibold">Site {i+1}</div>
               </div>
             ))}
           </div>

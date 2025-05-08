@@ -42,7 +42,7 @@ export function CorretorSeletor({ value, onChange, disabled = false }: CorretorS
   useEffect(() => {
     async function carregarCorretores() {
       try {
-        const response = await fetch('/api/corretores');
+        const response = await fetch('/api/imobiliaria/corretores');
         if (!response.ok) throw new Error('Falha ao carregar corretores');
         const data = await response.json();
         setCorretores(data);

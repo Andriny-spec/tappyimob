@@ -84,7 +84,7 @@ export function ImovelListagem({ onVerDetalhes, onEditar, onDeletar, onAdicionar
 
       const params = new URLSearchParams({
         page: currentPage.toString(),
-        limit: '10',
+        limit: '100', // Aumentado para mostrar mais imóveis por página
       });
 
       if (searchTerm) {

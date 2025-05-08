@@ -110,7 +110,8 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = params;
+    // Usar o id diretamente de params.id para evitar erro de Next.js
+    const id = params.id;
     const session = await getServerSession(authOptions);
     
     if (!session || !session.user) {
@@ -230,18 +231,59 @@ export async function PUT(
         },
       });
 
-      // Conectar ou criar novos adicionais
-      await prisma.imovel.update({
-        where: { id },
-        data: {
-          adicionais: {
-            connectOrCreate: adicionais.map((adicional: string) => ({
-              where: { nome: adicional },
-              create: { nome: adicional },
-            })),
-          },
-        },
-      });
+      // Processar adicionais - garantir que são strings simples
+      // Transformar os valores recebidos para garantir que são IDs válidos
+      let idsAdicionais: string[] = [];
+      
+      if (adicionais && adicionais.length > 0) {
+        // Converter para string se forem objetos
+        idsAdicionais = adicionais.map((adicional: any) => {
+          // Se for um objeto com propriedade id
+          if (typeof adicional === 'object' && adicional !== null && adicional.id) {
+            return adicional.id.toString();
+          }
+          // Se for uma string
+          else if (typeof adicional === 'string') {
+            return adicional;
+          }
+          // Qualquer outro caso, converter para string
+          return String(adicional);
+        });
+      }
+      
+      console.log('IDs dos adicionais para processar:', idsAdicionais);
+      
+      // Usar uma abordagem mais simples
+      if (idsAdicionais.length > 0) {
+        try {
+          // Desconectar todos os adicionais atuais
+          await prisma.imovel.update({
+            where: { id },
+            data: {
+              adicionais: {
+                set: [] // Remover todas as relações
+              }
+            }
+          });
+          
+          // Conectar os novos adicionais um a um
+          for (const adicionalId of idsAdicionais) {
+            await prisma.imovel.update({
+              where: { id },
+              data: {
+                adicionais: {
+                  connect: {
+                    id: adicionalId
+                  }
+                }
+              }
+            });
+          }
+        } catch (error) {
+          console.error('Erro ao processar adicionais:', error);
+          throw new Error('Falha ao processar adicionais do imóvel');
+        }
+      }
     }
 
     return NextResponse.json({

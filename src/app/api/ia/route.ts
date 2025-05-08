@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { headers, cookies } from 'next/headers';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth/auth-options';
 import deepseekClient from '@/lib/deepseek';
 import { prisma } from '@/lib/prisma';
 
@@ -8,6 +11,9 @@ const API_MOCK_ENABLED = process.env.NODE_ENV === 'production';
 export async function POST(request: NextRequest) {
   try {
     console.log('Recebendo requisição para API de IA');
+    // Obter informações da sessão logo no início
+    const session = await getServerSession(authOptions);
+    
     const { mensagem, contexto } = await request.json();
 
     if (!mensagem) {
@@ -47,6 +53,120 @@ export async function POST(request: NextRequest) {
       - Corretor (Corretor): id, nome (via user.nome), email (via user.email), telefone, creci
     `;
 
+    // Verifica se a mensagem é um comando para criar um imóvel
+    // Padrões que indicam criação de imóvel
+    const padroesCriarImovel = [
+      // Comandos explícitos
+      mensagem.toLowerCase().includes('cria') && (mensagem.toLowerCase().includes('imovel') || mensagem.toLowerCase().includes('imóvel')),
+      mensagem.toLowerCase().includes('cadastra') && (mensagem.toLowerCase().includes('imovel') || mensagem.toLowerCase().includes('imóvel')),
+      // Tipos de imóveis específicos
+      mensagem.toLowerCase().includes('cria') && mensagem.toLowerCase().includes('casa'),
+      mensagem.toLowerCase().includes('cadastra') && mensagem.toLowerCase().includes('casa'),
+      mensagem.toLowerCase().includes('cria') && mensagem.toLowerCase().includes('apartamento'),
+      mensagem.toLowerCase().includes('cadastra') && mensagem.toLowerCase().includes('apartamento'),
+      mensagem.toLowerCase().includes('cria') && mensagem.toLowerCase().includes('terreno'),
+      mensagem.toLowerCase().includes('cadastra') && mensagem.toLowerCase().includes('terreno'),
+      // Forma imperativa (crie)
+      mensagem.toLowerCase().includes('crie') && (mensagem.toLowerCase().includes('imovel') || mensagem.toLowerCase().includes('imóvel')),
+      mensagem.toLowerCase().includes('crie') && mensagem.toLowerCase().includes('casa'),
+      mensagem.toLowerCase().includes('crie') && mensagem.toLowerCase().includes('apartamento'),
+      mensagem.toLowerCase().includes('crie') && mensagem.toLowerCase().includes('terreno'),
+      // Detecção de descrição estruturada de imóvel com preço
+      (mensagem.toLowerCase().includes('casa') || mensagem.toLowerCase().includes('apartamento')) && 
+        mensagem.toLowerCase().includes('venda') && 
+        (mensagem.toLowerCase().includes('mil') || mensagem.toLowerCase().includes('r$')),
+      (mensagem.toLowerCase().includes('casa') || mensagem.toLowerCase().includes('apartamento')) && 
+        mensagem.toLowerCase().includes('quarto') && 
+        mensagem.toLowerCase().includes('banheiro')
+    ];
+    
+    // Padrões que indicam edição de imóvel
+    const padroesEditarImovel = [
+      // Comandos explícitos de edição
+      mensagem.toLowerCase().includes('edit') && (mensagem.toLowerCase().includes('imovel') || mensagem.toLowerCase().includes('imóvel')),
+      mensagem.toLowerCase().includes('alterar') && (mensagem.toLowerCase().includes('imovel') || mensagem.toLowerCase().includes('imóvel')),
+      mensagem.toLowerCase().includes('modific') && (mensagem.toLowerCase().includes('imovel') || mensagem.toLowerCase().includes('imóvel')),
+      mensagem.toLowerCase().includes('atualiz') && (mensagem.toLowerCase().includes('imovel') || mensagem.toLowerCase().includes('imóvel')),
+      // Comandos específicos para campos
+      mensagem.toLowerCase().includes('mude') && mensagem.toLowerCase().includes('valor') && mensagem.toLowerCase().includes('imovel'),
+      mensagem.toLowerCase().includes('mude') && mensagem.toLowerCase().includes('preço') && mensagem.toLowerCase().includes('imovel'),
+      mensagem.toLowerCase().includes('valor') && mensagem.toLowerCase().includes('para') && mensagem.toLowerCase().includes('imovel'),
+      mensagem.toLowerCase().includes('troque') && mensagem.toLowerCase().includes('valor'),
+      // Detecção de ID de imóvel
+      mensagem.includes('ID:') && (mensagem.toLowerCase().includes('valor') || mensagem.toLowerCase().includes('preço') || mensagem.toLowerCase().includes('alterar')),
+      mensagem.toLowerCase().includes('id do imóvel') && (mensagem.toLowerCase().includes('valor') || mensagem.toLowerCase().includes('preço'))
+    ];
+    
+    // Padrões que indicam exclusão de imóvel
+    const padroesExcluirImovel = [
+      // Comandos explícitos de exclusão
+      mensagem.toLowerCase().includes('exclui') && (mensagem.toLowerCase().includes('imovel') || mensagem.toLowerCase().includes('imóvel')),
+      mensagem.toLowerCase().includes('remov') && (mensagem.toLowerCase().includes('imovel') || mensagem.toLowerCase().includes('imóvel')),
+      mensagem.toLowerCase().includes('delet') && (mensagem.toLowerCase().includes('imovel') || mensagem.toLowerCase().includes('imóvel')),
+      mensagem.toLowerCase().includes('apag') && (mensagem.toLowerCase().includes('imovel') || mensagem.toLowerCase().includes('imóvel')),
+      // Forma imperativa
+      mensagem.toLowerCase().includes('exclua') && (mensagem.toLowerCase().includes('imovel') || mensagem.toLowerCase().includes('imóvel')),
+      // Detecção de ID com comandos de exclusão
+      mensagem.toLowerCase().includes('exclua') && mensagem.includes('-') && mensagem.includes('-'),
+      mensagem.toLowerCase().includes('delete') && mensagem.includes('-') && mensagem.includes('-')
+    ];
+    
+    // Não deve conter termos de corretor
+    const naoDizRespeitoACorretor = !mensagem.toLowerCase().includes('corretor') && 
+                                  !mensagem.toLowerCase().includes('agente');
+                                  
+    if (padroesCriarImovel.some(padrao => padrao) && naoDizRespeitoACorretor) {
+      
+      console.log('Detectado comando para criar imóvel');
+      
+      try {
+        // Verifica se o usuário está autenticado
+        if (!session || !session.user) {
+          return NextResponse.json({
+            resposta: 'Você precisa estar logado para criar um imóvel. Por favor, faça login e tente novamente.'
+          });
+        }
+        
+        // Passe as credenciais do usuário diretamente nos dados
+        const userEmail = session.user.email;
+          
+        // Chama o endpoint de criação de imóvel
+        const response = await fetch(new URL('/api/ia/criar-imovel', request.url).toString(), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ 
+            descricao: mensagem,
+            userEmail: userEmail
+          }),
+        });
+        
+        const resultado = await response.json();
+        
+        return NextResponse.json({
+          resposta: resultado.mensagem || 'Tentei criar um imóvel com base na sua descrição.',
+          resultado: {
+            tipo: 'criar_imovel',
+            status: resultado.sucesso ? 'ok' : 'erro',
+            dados: resultado.imovel || resultado.dadosParciais,
+            erro: resultado.erro,
+            camposFaltantes: resultado.camposFaltantes
+          }
+        });
+      } catch (error) {
+        console.error('Erro ao criar imóvel via IA:', error);
+        return NextResponse.json({
+          resposta: 'Desculpe, ocorreu um erro ao tentar criar o imóvel. Por favor, tente novamente com mais detalhes.',
+          resultado: {
+            tipo: 'criar_imovel',
+            status: 'erro',
+            erro: error instanceof Error ? error.message : 'Erro desconhecido'
+          }
+        });
+      }
+    }
+    
     // Instruções para o DeepSeek
     const prompt = `
       Você é um assistente especializado em imobiliárias que tem acesso ao banco de dados Prisma da empresa.
@@ -654,6 +774,408 @@ export async function POST(request: NextRequest) {
         temperature: 0.7,
         max_tokens: 500,
       });
+      
+      // Padrões que indicam criação de corretor
+    const padroesCriarCorretor = [
+      // Comandos explícitos
+      mensagem.toLowerCase().includes('cria') && (mensagem.toLowerCase().includes('corretor') || mensagem.toLowerCase().includes('agente')),
+      mensagem.toLowerCase().includes('cadastra') && (mensagem.toLowerCase().includes('corretor') || mensagem.toLowerCase().includes('agente')),
+      // Forma imperativa (crie)
+      mensagem.toLowerCase().includes('crie') && (mensagem.toLowerCase().includes('corretor') || mensagem.toLowerCase().includes('agente')),
+      // Detecta nome completo, email e creci na mesma mensagem (dados típicos de um corretor)
+      mensagem.toLowerCase().includes('@') && 
+        mensagem.toLowerCase().includes('creci') && 
+        mensagem.toLowerCase().includes('senha')
+    ];
+    
+    // Padrões que indicam exclusão de corretor
+    const padroesExcluirCorretor = [
+      // Comandos explícitos
+      mensagem.toLowerCase().includes('exclui') && (mensagem.toLowerCase().includes('corretor') || mensagem.toLowerCase().includes('agente')),
+      mensagem.toLowerCase().includes('remov') && (mensagem.toLowerCase().includes('corretor') || mensagem.toLowerCase().includes('agente')),
+      mensagem.toLowerCase().includes('delet') && (mensagem.toLowerCase().includes('corretor') || mensagem.toLowerCase().includes('agente')),
+      // Forma imperativa
+      mensagem.toLowerCase().includes('exclua') && (mensagem.toLowerCase().includes('corretor') || mensagem.toLowerCase().includes('agente'))
+    ];
+    
+    if (padroesCriarCorretor.some(padrao => padrao)) {
+        
+        console.log('Detectado comando para criar corretor');
+        
+        // Verifica se o usuário está autenticado
+      if (!session || !session.user) {
+        return NextResponse.json({
+          resposta: 'Você precisa estar logado para criar um corretor. Por favor, faça login e tente novamente.'
+        });
+      }
+      
+      // Passe as credenciais do usuário diretamente nos dados
+      const userEmail = session.user.email;
+      
+      // Redireciona para a API de criar corretor
+      const response = await fetch(new URL('/api/ia/criar-corretor', request.url), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          descricao: mensagem,
+          userEmail: userEmail
+        })
+      });
+        
+        const resultado = await response.json();
+        
+        if (resultado.sucesso) {
+          let mensagemSucesso = `✅ Corretor criado com sucesso!\n\n`;
+          
+          // Acessar corretamente os dados do usuário relacionado
+          if (resultado.corretor && resultado.corretor.user) {
+            mensagemSucesso += `**Nome:** ${resultado.corretor.user.nome}\n**Email:** ${resultado.corretor.user.email}\n`;
+          } else if (resultado.corretor) {
+            mensagemSucesso += `**ID:** ${resultado.corretor.id}\n`;
+          }
+          
+          // Adicionar dados do corretor se disponível
+          if (resultado.corretor && resultado.corretor.creci) {
+            mensagemSucesso += `**CRECI:** ${resultado.corretor.creci}\n`;
+          }
+          
+          if (resultado.corretor && resultado.corretor.telefone) {
+            mensagemSucesso += `**Telefone:** ${resultado.corretor.telefone}\n`;
+          }
+          
+          if (resultado.sugestoes && resultado.sugestoes.length > 0) {
+            mensagemSucesso += '\n**Observações:**\n';
+            resultado.sugestoes.forEach((sugestao: string) => {
+              mensagemSucesso += `- ${sugestao}\n`;
+            });
+          }
+          
+          return NextResponse.json({ resposta: mensagemSucesso });
+        } else {
+          return NextResponse.json({ 
+            resposta: `❌ Não foi possível criar o corretor: ${resultado.mensagem}\n\n${resultado.sugestoes ? resultado.sugestoes.join('\n') : ''}` 
+          });
+        }
+      }
+      
+      // Verifica se a mensagem é um comando para editar imóvel
+    if (padroesEditarImovel.some(padrao => padrao)) {
+      console.log('Detectado comando para editar imóvel');
+      
+      // Verifica se o usuário está autenticado
+      if (!session || !session.user) {
+        return NextResponse.json({
+          resposta: 'Você precisa estar logado para editar um imóvel. Por favor, faça login e tente novamente.'
+        });
+      }
+      
+      // Extrair ID do imóvel da mensagem
+      const uuidRegex = /([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i;
+      const uuidMatch = mensagem.match(uuidRegex);
+      
+      if (!uuidMatch) {
+        return NextResponse.json({
+          resposta: 'Por favor, especifique o ID do imóvel que deseja editar no formato UUID (ex: 123e4567-e89b-12d3-a456-426614174000).'
+        });
+      }
+      
+      const imovelId = uuidMatch[0];
+      
+      // Extrair campo e valor para atualização
+      // Analisamos a mensagem para identificar o que está sendo editado
+      
+      // Verificação para campo valor/preço
+      const camposValor = ['valor', 'preco', 'preço', 'price', 'custo'];
+      let campo = '';
+      let valor: any = null;
+      let adicionaisDetectados: string[] = [];
+      
+      // Detecta o campo de valor
+      for (const campoValor of camposValor) {
+        if (mensagem.toLowerCase().includes(campoValor)) {
+          campo = 'valor';
+          break;
+        }
+      }
+      
+      // Verifica se a mensagem contém referência a adicionais
+      // Padrões mais abrangentes para detectar comandos relacionados a adicionais
+      const padroesAdicionais = [
+        mensagem.toLowerCase().includes('adiciona') && mensagem.toLowerCase().includes('adicionais'),
+        mensagem.toLowerCase().includes('adicion') && mensagem.toLowerCase().includes('imovel'),
+        mensagem.toLowerCase().includes('edite') && mensagem.toLowerCase().includes('adicionais'),
+        mensagem.toLowerCase().includes('atualiz') && mensagem.toLowerCase().includes('adicionais'),
+        mensagem.toLowerCase().includes('os adicionais'),
+        mensagem.toLowerCase().includes('com adicionais'),
+        mensagem.toLowerCase().includes('incluindo'),
+        mensagem.toLowerCase().includes('inclua'),
+        mensagem.toLowerCase().includes('acrescente')
+      ];
+      
+      if (padroesAdicionais.some(padrao => padrao)) {
+        console.log('Detectada referência a adicionais na mensagem');
+        campo = 'adicionais';
+        
+        // Abordagens para extrair os adicionais
+        // 1. Verifica se a mensagem contém a frase "os adicionais são" ou similar
+        const regexAdicionaisSao = /(os )?(adicionais|itens|recursos) (s[aã]o|ser[aã]o|incluem|inclu[ií]dos|cont[eê]m|possui)\s*:?\s*(.+)/i;
+        const matchAdicionaisSao = mensagem.match(regexAdicionaisSao);
+        
+        // 2. Verifica outras estruturas comuns como "adicionando os adicionais"
+        const regexAdicionando = /adicionando (os )?(adicionais|itens|recursos)\s*:?\s*(.+)/i;
+        const matchAdicionando = mensagem.match(regexAdicionando);
+        
+        if (matchAdicionaisSao && matchAdicionaisSao[4]) {
+          // Extrai a lista de adicionais após a frase
+          const listaAdicionaisTexto = matchAdicionaisSao[4];
+          adicionaisDetectados = listaAdicionaisTexto
+            .split(/[,;\.\n]+/) // Divide por vírgulas, ponto-e-vírgulas, pontos ou quebras de linha
+            .map((item: string) => item.trim())
+            .filter((item: string) => item.length > 0 && item.toLowerCase() !== 'etc' && item.toLowerCase() !== 'entre outros');
+          
+          console.log('Adicionais detectados do padrão "os adicionais são":', adicionaisDetectados);
+        } else if (matchAdicionando && matchAdicionando[3]) {
+          // Extrai a lista de adicionais após "adicionando os adicionais"
+          const listaAdicionaisTexto = matchAdicionando[3];
+          adicionaisDetectados = listaAdicionaisTexto
+            .split(/[,;\.\n]+/) // Divide por vírgulas, ponto-e-vírgulas, pontos ou quebras de linha
+            .map((item: string) => item.trim())
+            .filter((item: string) => item.length > 0 && item.toLowerCase() !== 'etc' && item.toLowerCase() !== 'entre outros');
+          
+          console.log('Adicionais detectados do padrão "adicionando os adicionais":', adicionaisDetectados);
+        } else {
+          // 3. Simplesmente encontra uma lista separada por vírgulas após encontrar UUID
+          const uuidRegex = /([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i;
+          const uuidMatch = mensagem.match(uuidRegex);
+          
+          if (uuidMatch) {
+            const posUUID = mensagem.indexOf(uuidMatch[0]) + uuidMatch[0].length;
+            const restoMensagem = mensagem.substring(posUUID);
+            
+            // Procura uma lista separada por vírgulas
+            const listMatch = restoMensagem.match(/[:\s]([^\.]*)/);
+            if (listMatch && listMatch[1]) {
+              adicionaisDetectados = listMatch[1]
+                .split(/[,;\.\n]+/)
+                .map((item: string) => item.trim())
+                .filter((item: string) => item.length > 0 && item.toLowerCase() !== 'etc' && item.toLowerCase() !== 'entre outros');
+                
+              console.log('Adicionais detectados após UUID:', adicionaisDetectados);
+            }
+          }
+        }
+        
+        // 4. Se não conseguiu extrair por padrões, tenta palavras-chave comuns
+        if (adicionaisDetectados.length === 0) {
+          // Tenta detectar adicionais comuns no texto
+          const adicionaisComuns = [
+            'wifi', 'wi-fi', 'piscina', 'churrasqueira', 'academia', 'ar condicionado', 
+            'aquecimento', 'elevador', 'playground', 'salão de festas', 'salão de jogos', 
+            'varanda gourmet', 'cozinha gourmet', 'segurança 24h', 'portão eletrônico', 
+            'câmeras', 'cameras', 'área de lazer', 'area de lazer', 'jardim', 'quintal', 
+            'moveis planejados', 'móveis planejados', 'estacionamento', 'garagem', 'depósito', 'deposito',
+            'sala espacial'
+          ];
+          
+          for (const adicional of adicionaisComuns) {
+            if (mensagem.toLowerCase().includes(adicional)) {
+              adicionaisDetectados.push(adicional);
+            }
+          }
+          
+          console.log('Adicionais detectados por palavras-chave:', adicionaisDetectados);
+        }
+      }
+      
+      // Se for o campo valor, extrai o valor numérico
+      if (campo === 'valor') {
+        // Procura por padrões como "500 mil", "R$ 500 mil", "500.000"
+        const valorRegex = /(\d+([.,]\d+)*)\s*(mil|milh[aõ]o|milh[oõ]es|reais|reals|k)/i;
+        const valorMatch = mensagem.match(valorRegex);
+        
+        if (valorMatch) {
+          const valorNumerico = parseFloat(valorMatch[1].replace(',', '.'));
+          const unidade = valorMatch[3]?.toLowerCase();
+          
+          if (unidade === 'mil' || unidade === 'k') {
+            valor = valorNumerico * 1000;
+          } else if (unidade === 'milhão' || unidade === 'milhoes' || unidade === 'milhões') {
+            valor = valorNumerico * 1000000;
+          } else {
+            valor = valorNumerico;
+          }
+        } else {
+          // Tenta extrair apenas o número
+          const numeroRegex = /(\d+([.,]\d+)*)/;
+          const numeroMatch = mensagem.match(numeroRegex);
+          
+          if (numeroMatch) {
+            valor = parseFloat(numeroMatch[1].replace(',', '.'));
+          }
+        }
+      }
+      
+      // Se for adicionais, verificamos se temos a lista
+      if (campo === 'adicionais') {
+        if (adicionaisDetectados.length === 0) {
+          return NextResponse.json({
+            resposta: 'Por favor, especifique quais adicionais deseja incluir. Por exemplo: "Os adicionais do imóvel ID-123 são: Wi-Fi, Piscina, Churrasqueira"'
+          });
+        }
+      } else if (!campo || valor === null) {
+        return NextResponse.json({
+          resposta: 'Por favor, especifique claramente qual campo deseja editar e o novo valor. Por exemplo: "Altere o valor do imóvel ID-123 para R$ 500 mil"'
+        });
+      }
+      
+      // Chama o endpoint de edição de imóvel
+      try {
+        const response = await fetch(new URL('/api/ia/editar-imovel', request.url), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            imovelId,
+            campo,
+            valor,
+            adicionais: adicionaisDetectados,
+            userEmail: session.user.email
+          })
+        });
+        
+        const resultado = await response.json();
+        
+        if (resultado.sucesso) {
+          return NextResponse.json({
+            resposta: `✅ ${resultado.mensagem}`
+          });
+        } else {
+          return NextResponse.json({
+            resposta: `❌ Não foi possível editar o imóvel: ${resultado.mensagem}`
+          });
+        }
+      } catch (error) {
+        console.error('Erro ao editar imóvel:', error);
+        return NextResponse.json({
+          resposta: 'Ocorreu um erro ao tentar editar o imóvel. Por favor, tente novamente mais tarde.'
+        });
+      }
+    }
+    
+    // Verifica se a mensagem é um comando para excluir imóvel
+    if (padroesExcluirImovel.some(padrao => padrao)) {
+      console.log('Detectado comando para excluir imóvel');
+      
+      // Verifica se o usuário está autenticado
+      if (!session || !session.user) {
+        return NextResponse.json({
+          resposta: 'Você precisa estar logado para excluir um imóvel. Por favor, faça login e tente novamente.'
+        });
+      }
+      
+      // Extrair ID do imóvel da mensagem
+      const uuidRegex = /([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i;
+      const uuidMatch = mensagem.match(uuidRegex);
+      
+      if (!uuidMatch) {
+        return NextResponse.json({
+          resposta: 'Por favor, especifique o ID do imóvel que deseja excluir no formato UUID (ex: 123e4567-e89b-12d3-a456-426614174000).'
+        });
+      }
+      
+      const imovelId = uuidMatch[0];
+      const userEmail = session.user.email;
+      
+      // Chama o endpoint de exclusão de imóvel
+      try {
+        const response = await fetch(new URL('/api/ia/excluir-imovel', request.url), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            imovelId,
+            userEmail
+          })
+        });
+        
+        const resultado = await response.json();
+        
+        if (resultado.sucesso) {
+          return NextResponse.json({
+            resposta: `✅ ${resultado.mensagem}`
+          });
+        } else {
+          return NextResponse.json({
+            resposta: `❌ Não foi possível excluir o imóvel: ${resultado.mensagem}`
+          });
+        }
+      } catch (error) {
+        console.error('Erro ao excluir imóvel:', error);
+        return NextResponse.json({
+          resposta: 'Ocorreu um erro ao tentar excluir o imóvel. Por favor, tente novamente mais tarde.'
+        });
+      }
+    }
+    
+    // Verifica se a mensagem é um comando para excluir corretor
+    if (padroesExcluirCorretor.some(padrao => padrao)) {
+      console.log('Detectado comando para excluir corretor');
+      
+      // Verifica se o usuário está autenticado
+      if (!session || !session.user) {
+        return NextResponse.json({
+          resposta: 'Você precisa estar logado para excluir um corretor. Por favor, faça login e tente novamente.'
+        });
+      }
+      
+      // Extrair email do corretor a ser excluído
+      const emailRegex = /([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9._-]+)/gi;
+      const emails = mensagem.match(emailRegex);
+      
+      if (!emails || emails.length === 0) {
+        return NextResponse.json({
+          resposta: 'Por favor, especifique o email do corretor que deseja excluir.'
+        });
+      }
+      
+      const emailCorretor = emails[0];
+      const userEmail = session.user.email;
+      
+      // Chama o endpoint de exclusão de corretor
+      try {
+        const response = await fetch(new URL('/api/ia/excluir-corretor', request.url), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            email: emailCorretor,
+            userEmail: userEmail
+          })
+        });
+        
+        const resultado = await response.json();
+        
+        if (resultado.sucesso) {
+          return NextResponse.json({
+            resposta: `✅ ${resultado.mensagem}`
+          });
+        } else {
+          return NextResponse.json({
+            resposta: `❌ Não foi possível excluir o corretor: ${resultado.mensagem}`
+          });
+        }
+      } catch (error) {
+        console.error('Erro ao excluir corretor:', error);
+        return NextResponse.json({
+          resposta: 'Ocorreu um erro ao tentar excluir o corretor. Por favor, tente novamente mais tarde.'
+        });
+      }
+    }  
       
       return NextResponse.json({
         resposta: respostaFinal.choices[0].message.content,

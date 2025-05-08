@@ -21,6 +21,9 @@ import { ImovelForm } from '@/components/imoveis/imovel-form-new';
 import {
   Dialog,
   DialogContent,
+  DialogTitle,
+  DialogDescription,
+  DialogHeader
 } from '@/components/ui/dialog';
 
 interface Imovel {
@@ -69,8 +72,13 @@ export default function ImoveisPage() {
   };
 
   const fecharFormulario = () => {
-    setModoFormulario(null);
-    setImovelAtual(null);
+    // Forçar limpeza completa do estado
+    document.body.style.pointerEvents = 'none';
+    setTimeout(() => {
+      setModoFormulario(null);
+      setImovelAtual(null);
+      document.body.style.pointerEvents = '';
+    }, 50);
   };
 
   // Excluir imóvel
@@ -79,6 +87,9 @@ export default function ImoveisPage() {
       setIsLoading(true);
       const response = await fetch(`/api/imobiliaria/imoveis/${id}`, {
         method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        }
       });
 
       if (!response.ok) {
@@ -86,8 +97,8 @@ export default function ImoveisPage() {
       }
 
       toast.success('Imóvel excluído com sucesso');
-      // Atualizar lista de imóveis
-      setImoveis(imoveis.filter(imovel => imovel.id !== id));
+      // Atualizar lista de imóveis sem causar reload
+      setImoveis(prevImoveis => prevImoveis.filter(imovel => imovel.id !== id));
     } catch (error) {
       console.error('Erro ao excluir imóvel:', error);
       toast.error('Não foi possível excluir o imóvel. Tente novamente.');
@@ -147,15 +158,13 @@ export default function ImoveisPage() {
 
   // Renderização condicional do formulário em modal
   const renderModalContent = () => {
-    if (!modoFormulario) return null;
-
     return (
       <ImovelForm
         imovel={imovelAtual}
         isLoading={isLoading}
         onSubmit={salvarImovel}
         onCancel={fecharFormulario}
-        mode={modoFormulario}
+        mode={modoFormulario || 'visualizar'}
       />
     );
   };
@@ -198,11 +207,30 @@ export default function ImoveisPage() {
       </Card>
 
       {/* Modal para adicionar/editar/visualizar imóvel */}
-      <Dialog open={!!modoFormulario} onOpenChange={(open) => !open && fecharFormulario()}>
-        <DialogContent className="max-w-[95vw] max-h-[95vh] w-[1600px] overflow-auto p-0" hideClose>
-          {renderModalContent()}
-        </DialogContent>
-      </Dialog>
+      {modoFormulario && (
+        <Dialog open={true} onOpenChange={(open) => {
+          if (!open) {
+            // Forçar a limpeza completa do estado
+            setTimeout(() => {
+              fecharFormulario();
+            }, 100);
+          }
+        }}>
+          <DialogContent className="max-w-[99vw] max-h-[98vh] w-[3000px] overflow-auto p-0">
+            <DialogHeader>
+              <DialogTitle className="sr-only">
+                {modoFormulario === 'adicionar' ? 'Adicionar Imóvel' : 
+                 modoFormulario === 'editar' ? 'Editar Imóvel' : 'Visualizar Imóvel'}
+              </DialogTitle>
+              <DialogDescription className="sr-only">
+                {modoFormulario === 'adicionar' ? 'Preencha os dados para adicionar um novo imóvel' : 
+                 modoFormulario === 'editar' ? 'Edite os dados do imóvel' : 'Visualize os detalhes do imóvel'}
+              </DialogDescription>
+            </DialogHeader>
+            {renderModalContent()}
+          </DialogContent>
+        </Dialog>
+      )}
     </PageContainer>
   );
 }

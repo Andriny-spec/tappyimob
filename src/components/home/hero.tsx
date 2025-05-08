@@ -185,9 +185,9 @@ export function Hero() {
             <p className="text-white/60 text-sm font-medium">Confiado por empresas líderes do mercado</p>
             <div className="flex flex-wrap justify-center gap-8 opacity-70 grayscale hover:grayscale-0 transition-all">
               {/* Aqui você pode adicionar logos de parceiros */}
-              <div className="h-8 w-32 bg-white/20 rounded flex items-center justify-center">Logo 1</div>
-              <div className="h-8 w-32 bg-white/20 rounded flex items-center justify-center">Logo 2</div>
-              <div className="h-8 w-32 bg-white/20 rounded flex items-center justify-center">Logo 3</div>
+              <div className="h-8 w-32 bg-white/20 rounded flex items-center justify-center">Tappy CRM</div>
+              <div className="h-8 w-32 bg-white/20 rounded flex items-center justify-center">Tappy I.A</div>
+              <div className="h-8 w-32 bg-white/20 rounded flex items-center justify-center">Tappy Imob</div>
             </div>
           </motion.div>
         </motion.div>

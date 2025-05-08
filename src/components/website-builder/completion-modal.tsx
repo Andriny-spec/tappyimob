@@ -51,16 +51,22 @@ export const CompletionModal: React.FC<CompletionModalProps> = ({ config }) => {
   
   const price = calculatePrice();
   
-  // Determinar o domínio a ser exibido
-  let domain = 'imob.tappy.id/exemplo/home';
+  // Obter o nome do usuário para URL e logar para depuração
+  console.log('Configuração completa do site:', config);
+  console.log('Subdomínio recebido:', config.subdominio);
   
-  if (config.dominioProprio) {
-    domain = config.dominioProprio || 'seudominio.com.br';
-  } else if (config.subdominio) {
-    domain = `${config.subdominio}.tappy.imob.br`;
-  } else if (config.domainType === 'custom') {
-    domain = config.customDomain || 'seudominio.com.br';
-  }
+  // Definir o nome do site sem erros de tipagem
+  let siteName = 'meuusuario';
+  
+  // Se houver subdomínio definido, usar ele
+  if (config.subdominio && config.subdominio !== '') {
+    siteName = config.subdominio;
+  } 
+  
+  console.log('Nome do site a ser usado na URL:', siteName);
+  
+  // Usar o formato [imobiliaria]/home já existente
+  const siteUrl = `/${siteName}/home`;
   
   return (
     <div className="space-y-8">
@@ -91,15 +97,21 @@ export const CompletionModal: React.FC<CompletionModalProps> = ({ config }) => {
             Seu site está sendo implementado e estará disponível em breve no endereço:
           </p>
           <div className="mt-2 mb-6">
-            <span className="font-medium text-primary">https://{domain}</span>
+            <span className="font-medium text-primary">{siteUrl.startsWith('http') ? siteUrl : `${window.location.origin}${siteUrl}`}</span>
           </div>
           
           <div className="flex flex-col sm:flex-row gap-3 justify-center mt-4">
             <Button 
               onClick={() => {
-                // Link para visualização local do site (usando a nova estrutura de rotas)
-                const subdomain = config.subdominio || 'exemplo';
-                window.open(`/${subdomain}/home`, '_blank');
+                // Link direto para rota [imobiliaria]/home
+                let siteName = 'meuusuario';
+                if (config.subdominio && config.subdominio !== '') {
+                  siteName = config.subdominio;
+                }
+                console.log('Abrindo site com nome:', siteName);
+                const url = `/${siteName}/home`;
+                console.log('Abrindo site:', url);
+                window.open(url, '_blank');
               }}
               className="gap-2"
             >

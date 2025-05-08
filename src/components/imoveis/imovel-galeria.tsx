@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,8 +13,11 @@ import {
   Plus, 
   Image as ImageIcon, 
   ArrowUpCircle, 
-  ArrowDownCircle 
+  ArrowDownCircle,
+  Upload,
+  Loader2
 } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface Foto {
   id?: string;
@@ -40,6 +43,8 @@ export function ImovelGaleria({
   disabled = false 
 }: ImovelGaleriaProps) {
   const [novaUrl, setNovaUrl] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const adicionarFoto = () => {
     if (!novaUrl.trim()) return;
@@ -52,6 +57,62 @@ export function ImovelGaleria({
     
     onChange([...fotos, novaFoto]);
     setNovaUrl('');
+  };
+
+  const uploadImagem = async (file: File) => {
+    if (!file) return;
+    
+    try {
+      setIsUploading(true);
+      
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const filename = file.name.replace(/[^a-zA-Z0-9.]/g, '-');
+      const response = await fetch(`/api/upload?filename=${encodeURIComponent(filename)}`, {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Erro ao fazer upload da imagem');
+      }
+      
+      const { url } = await response.json();
+      
+      // Adicionar nova foto à galeria
+      const novaFoto: Foto = {
+        url,
+        legenda: '',
+        ordem: fotos.length
+      };
+      
+      onChange([...fotos, novaFoto]);
+      
+      // Se for a primeira foto, definir como principal
+      if (fotos.length === 0 && !fotoPrincipal) {
+        onSetFotoPrincipal(url);
+      }
+      
+      toast.success('Imagem enviada com sucesso!');
+    } catch (error) {
+      console.error('Erro ao fazer upload:', error);
+      toast.error('Erro ao fazer upload da imagem');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+  
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      uploadImagem(file);
+    }
+  };
+  
+  const triggerFileInput = () => {
+    fileInputRef.current?.click();
   };
 
   const removerFoto = (index: number) => {
@@ -107,18 +168,43 @@ export function ImovelGaleria({
         <div className="flex-1">
           <Input
             type="url"
-            placeholder="URL da imagem"
+            placeholder="URL da imagem (opcional)"
             value={novaUrl}
             onChange={(e) => setNovaUrl(e.target.value)}
-            disabled={disabled}
+            disabled={disabled || isUploading}
           />
         </div>
         <Button
           type="button"
-          onClick={adicionarFoto}
-          disabled={!novaUrl || disabled}
+          variant="outline"
+          onClick={triggerFileInput}
+          disabled={disabled || isUploading}
         >
-          <Plus className="mr-2 h-4 w-4" /> Adicionar Foto
+          {isUploading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Enviando...
+            </>
+          ) : (
+            <>
+              <Upload className="mr-2 h-4 w-4" /> Fazer Upload
+            </>
+          )}
+          <input
+            type="file"
+            ref={fileInputRef}
+            className="hidden"
+            onChange={handleFileChange}
+            accept="image/*"
+            disabled={disabled || isUploading}
+          />
+        </Button>
+        <Button
+          type="button"
+          onClick={adicionarFoto}
+          disabled={!novaUrl || disabled || isUploading}
+        >
+          <Plus className="mr-2 h-4 w-4" /> Adicionar por URL
         </Button>
       </div>
 

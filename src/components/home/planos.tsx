@@ -11,6 +11,19 @@ import { PlanosEmailModal } from './planos-email-modal';
 type PlanType = 'mensal' | 'anual';
 type PlanOption = string;
 
+type PlanoInfo = {
+  id?: string;
+  titulo: string;
+  descricao: string;
+  icon: React.ReactNode;
+  mensal: string;
+  anual: string;
+  economiaAnual: string;
+  destaque: boolean;
+  recursos: string[];
+  recursosFaltantes: string[];
+};
+
 // Definição dos planos padrão enquanto carrega da API
 const planosInfoPadrao = {
   starter: {
@@ -114,7 +127,7 @@ export function Planos() {
   }, []);
   
   // Mapeamento de planos da API para o formato de exibição
-  const planosInfo = planosAPI.length > 0 ? planosAPI.reduce((acc, plano) => {
+  const planosInfo: Record<string, PlanoInfo> = planosAPI.length > 0 ? planosAPI.reduce((acc: Record<string, PlanoInfo>, plano) => {
     // Identificar qual ícone usar com base no nome do plano
     let icon;
     if (plano.name.toLowerCase().includes('starter')) {
@@ -352,11 +365,11 @@ export function Planos() {
                     {/* Lista de recursos incluídos */}
                     <div className="mb-6">
                       <p className="text-sm text-white/80 font-medium mb-4">Inclui:</p>
-                      <ul className="space-y-3">
-                        {planoData.recursos.map((recurso, index) => (
-                          <li key={index} className="flex items-start">
-                            <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0 mt-0.5 mr-3" />
-                            <span className="text-white/70">{recurso}</span>
+                      <ul className="space-y-3 my-8">
+                        {planoData.recursos.map((recurso: string, index: number) => (
+                          <li key={`recurso-${index}`} className="flex items-start">
+                            <CheckCircle2 className="h-5 w-5 text-emerald-500 mr-2 flex-shrink-0 mt-0.5" />
+                            <span className="text-sm text-white/90">{recurso}</span>
                           </li>
                         ))}
                       </ul>
@@ -367,10 +380,10 @@ export function Planos() {
                       <div className="mt-auto">
                         <p className="text-sm text-white/80 font-medium mb-4">Não inclui:</p>
                         <ul className="space-y-3">
-                          {planoData.recursosFaltantes.map((recurso, index) => (
-                            <li key={index} className="flex items-start">
-                              <X className="h-5 w-5 text-white/40 shrink-0 mt-0.5 mr-3" />
-                              <span className="text-white/40">{recurso}</span>
+                          {planoData.recursosFaltantes.map((recurso: string, index: number) => (
+                            <li key={`faltante-${index}`} className="flex items-start opacity-50">
+                              <X className="h-5 w-5 text-gray-400 mr-2 flex-shrink-0 mt-0.5" />
+                              <span className="text-sm text-white/70">{recurso}</span>
                             </li>
                           ))}
                         </ul>
@@ -402,10 +415,11 @@ export function Planos() {
       
       {/* Modal de captura de email */}
       <PlanosEmailModal 
-        isOpen={modalAberto}
-        onClose={() => setModalAberto(false)}
+        isOpen={modalAberto} 
+        onClose={() => setModalAberto(false)} 
         planoId={planoSelecionadoId}
         planoNome={planoSelecionadoNome}
+        planoIntervalo={planoSelecionado}
       />
     </section>
   );

@@ -46,7 +46,8 @@ import {
   BarChart4,
   Activity,
   AlertCircle,
-  X
+  X,
+  Loader2
 } from 'lucide-react';
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
@@ -678,6 +679,199 @@ const DeleteConfirmationModal = ({
   );
 };
 
+// Modal para adicionar corretor
+const CorretorAddModal = ({ 
+  isOpen, 
+  onClose, 
+  onSave
+}: { 
+  isOpen: boolean, 
+  onClose: () => void, 
+  onSave: (data: any) => void
+}) => {
+  const [formData, setFormData] = useState<any>({
+    nome: '',
+    email: '',
+    creci: '',
+    telefone: '',
+    endereco: '',
+    numero: '',
+    bairro: '',
+    cidade: '',
+    estado: '',
+    status: 'ATIVO',
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev: any) => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    
+    onSave(formData);
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto p-6 bg-background border rounded-lg shadow-lg">
+        <DialogHeader className="pb-4 border-b">
+          <DialogTitle className="text-2xl font-bold text-primary">Adicionar Corretor</DialogTitle>
+          <DialogDescription>Preencha as informações para adicionar um novo corretor</DialogDescription>
+        </DialogHeader>
+        
+        <form onSubmit={handleSubmit} className="space-y-6 py-4">
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md flex items-start gap-2">
+              <AlertCircle className="h-5 w-5 text-red-500 mt-0.5" />
+              <span>{error}</span>
+            </div>
+          )}
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="nome">Nome Completo *</Label>
+              <Input
+                id="nome"
+                name="nome"
+                value={formData.nome}
+                onChange={handleChange}
+                placeholder="Nome completo do corretor"
+                required
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="email">E-mail *</Label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                value={formData.email}
+                onChange={handleChange}
+                placeholder="email@exemplo.com"
+                required
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="creci">CRECI</Label>
+              <Input
+                id="creci"
+                name="creci"
+                value={formData.creci}
+                onChange={handleChange}
+                placeholder="Número do CRECI"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="telefone">Telefone</Label>
+              <Input
+                id="telefone"
+                name="telefone"
+                value={formData.telefone}
+                onChange={handleChange}
+                placeholder="(11) 99999-9999"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="endereco">Endereço</Label>
+              <Input
+                id="endereco"
+                name="endereco"
+                value={formData.endereco}
+                onChange={handleChange}
+                placeholder="Rua, Avenida..."
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="numero">Número</Label>
+              <Input
+                id="numero"
+                name="numero"
+                value={formData.numero}
+                onChange={handleChange}
+                placeholder="123"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="bairro">Bairro</Label>
+              <Input
+                id="bairro"
+                name="bairro"
+                value={formData.bairro}
+                onChange={handleChange}
+                placeholder="Nome do bairro"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="cidade">Cidade</Label>
+              <Input
+                id="cidade"
+                name="cidade"
+                value={formData.cidade}
+                onChange={handleChange}
+                placeholder="Nome da cidade"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="estado">Estado</Label>
+              <Input
+                id="estado"
+                name="estado"
+                value={formData.estado}
+                onChange={handleChange}
+                placeholder="UF"
+                maxLength={2}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="status">Status</Label>
+              <select
+                id="status"
+                name="status"
+                value={formData.status}
+                onChange={handleChange}
+                className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
+              >
+                <option value="ATIVO">Ativo</option>
+                <option value="INATIVO">Inativo</option>
+                <option value="PENDENTE">Pendente</option>
+                <option value="BLOQUEADO">Bloqueado</option>
+              </select>
+            </div>
+          </div>
+          
+          <DialogFooter className="pt-4 border-t">
+            <Button variant="outline" type="button" onClick={onClose}>Cancelar</Button>
+            <Button type="submit" disabled={loading}>
+              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Adicionar Corretor
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 export default function CorretoresPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('todos');
@@ -692,6 +886,7 @@ export default function CorretoresPage() {
   const [corretorToDelete, setCorretorToDelete] = useState<{id: string, nome: string} | null>(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [corretorToEdit, setCorretorToEdit] = useState<any>(null);
+  const [addModalOpen, setAddModalOpen] = useState(false);
   
   // Usando o toast do sonner diretamente
 
@@ -747,6 +942,40 @@ export default function CorretoresPage() {
   const handleViewCorretor = (id: string) => {
     setSelectedCorretorId(id);
     setDetailsModalOpen(true);
+  };
+  
+  // Manipulador para adicionar novo corretor
+  const handleAddCorretor = async (data: any) => {
+    try {
+      const response = await fetch('/api/imobiliaria/corretores', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Falha ao adicionar corretor');
+      }
+      
+      const novoCorretor = await response.json();
+      
+      // Adicionar o novo corretor à lista
+      setCorretores([...corretores, {
+        ...novoCorretor,
+        imoveisFechados: 0,
+        avaliacoes: 0,
+        avaliacaoMedia: 5.0,
+        desempenhoMensal: Array(6).fill(0)
+      }]);
+      
+      setAddModalOpen(false);
+      toast.success('Corretor adicionado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao adicionar corretor:', error);
+      toast.error('Erro ao adicionar corretor. Tente novamente.');
+    }
   };
 
   // Manipulador para abrir o modal de edição
@@ -874,7 +1103,7 @@ export default function CorretoresPage() {
             <Filter className="h-4 w-4" />
             Filtros
           </Button>
-          <Button className="gap-1">
+          <Button className="gap-1" onClick={() => setAddModalOpen(true)}>
             <Plus className="h-4 w-4" />
             Novo Corretor
           </Button>
@@ -1326,6 +1555,13 @@ export default function CorretoresPage() {
         onClose={() => setEditModalOpen(false)}
         corretor={corretorToEdit}
         onSave={handleSaveCorretor}
+      />
+
+      {/* Modal de adição de corretor */}
+      <CorretorAddModal
+        isOpen={addModalOpen}
+        onClose={() => setAddModalOpen(false)}
+        onSave={handleAddCorretor}
       />
 
       {/* Modal de confirmação de exclusão */}

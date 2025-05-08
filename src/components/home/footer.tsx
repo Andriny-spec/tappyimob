@@ -106,12 +106,6 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/buscar/em-destaque" className="text-white/80 hover:text-emerald-400 transition-colors flex items-center gap-2">
-                  <Search className="h-4 w-4 text-emerald-400" />
-                  Destaques
-                </Link>
-              </li>
-              <li>
                 <Link href="/imobiliarias" className="text-white/80 hover:text-emerald-400 transition-colors flex items-center gap-2">
                   <Building2 className="h-4 w-4 text-emerald-400" />
                   Imobiliárias
@@ -124,13 +118,13 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/blog" className="text-white/80 hover:text-emerald-400 transition-colors flex items-center gap-2">
+                <Link href="https://tappy.id/blog" className="text-white/80 hover:text-emerald-400 transition-colors flex items-center gap-2">
                   <BookOpen className="h-4 w-4 text-emerald-400" />
                   Blog
                 </Link>
               </li>
               <li>
-                <Link href="/contato" className="text-white/80 hover:text-emerald-400 transition-colors flex items-center gap-2">
+                <Link href="https://tappy.id/suporte" className="text-white/80 hover:text-emerald-400 transition-colors flex items-center gap-2">
                   <MessageSquare className="h-4 w-4 text-emerald-400" />
                   Contato
                 </Link>
@@ -206,7 +200,7 @@ export function Footer() {
               <li>
                 <Link href="/integracao/whatsapp" className="text-white/80 hover:text-emerald-400 transition-colors flex items-center gap-2">
                   <MessageSquare className="h-4 w-4 text-emerald-400" />
-                  Integração WhatsApp
+                 Inteligência Artificial
                 </Link>
               </li>
               <li>
@@ -263,19 +257,6 @@ export function Footer() {
               </li>
             </ul>
             
-            <div className="mt-8 bg-gradient-to-br from-white/5 to-white/2 backdrop-blur-sm p-4 rounded-lg border border-emerald-500/20">
-              <h4 className="font-medium text-emerald-400 mb-3 flex items-center gap-2">
-                <BadgeCheck className="h-4 w-4" />
-                Atendimento
-              </h4>
-              <p className="text-white/70 text-sm mb-2">Segunda a Sexta, 9h às 18h</p>
-              <Button 
-                className="w-full gap-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700"
-                size="sm"
-              >
-                <Phone className="h-4 w-4" /> Agendar uma ligação
-              </Button>
-            </div>
           </div>
         </div>
         

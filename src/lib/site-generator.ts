@@ -42,6 +42,11 @@ type ConteudoPagina = {
   }[];
 };
 
+// Importações adicionais
+import { prisma } from './prisma';
+import path from 'path';
+import fs from 'fs/promises';
+
 /**
  * Classe para gerar conteúdo para sites de imobiliárias usando IA
  */

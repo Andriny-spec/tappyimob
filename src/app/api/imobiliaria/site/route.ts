@@ -2,7 +2,7 @@ import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { authOptions } from '@/lib/auth';
-import { SiteGenerator } from '@/lib/site-generator';
+import { SiteGenerator } from '@/lib/site-generator-instance';
 
 // Definir os enums localmente para evitar problemas com a importação do Prisma
 // Isso é uma solução temporária até resolver o problema de build com o Prisma
@@ -69,8 +69,25 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Informações incompletas' }, { status: 400 });
     }
 
-    // Gerar subdomínio a partir do nome se não for fornecido
-    let subdominio = subdominioSugerido || nome.toLowerCase().replace(/[^a-z0-9]/g, '');
+    // Buscar informações detalhadas da imobiliária para usar o username
+    const imobiliariaDetalhes = await prisma.imobiliaria.findUnique({
+      where: { id: imobiliariaId },
+      include: { user: true }
+    });
+    
+    if (!imobiliariaDetalhes || !imobiliariaDetalhes.user) {
+      return NextResponse.json({ error: 'Informações da imobiliária incompletas' }, { status: 400 });
+    }
+    
+    // Gerar subdomínio com base em diferentes opções, em ordem de prioridade:
+    // 1. Subdomínio sugerido pelo usuário
+    // 2. Username da imobiliária
+    // 3. Nome da imobiliária
+    // 4. Nome do site
+    let subdominio = subdominioSugerido || 
+                    (imobiliariaDetalhes.user.username ? imobiliariaDetalhes.user.username.toLowerCase().replace(/[^a-z0-9]/g, '') : null) || 
+                    (imobiliariaDetalhes.user.nome ? imobiliariaDetalhes.user.nome.toLowerCase().replace(/[^a-z0-9]/g, '') : null) || 
+                    nome.toLowerCase().replace(/[^a-z0-9]/g, '');
 
     // Verificar se o subdomínio já existe
     const subdominioExistente = await prisma.imobiliariaSite.findFirst({
@@ -99,21 +116,50 @@ export async function POST(request: Request) {
         corTexto: corTexto || '#111827',
         fonteTitulos: fonteTitulos || 'Montserrat',
         fonteCorpo: fonteCorpo || 'Roboto',
-        logoUrl: logoUrl || '',
-        // Este campo é ajustado em um utilitário separado porque não estamos usando referências diretas
-        metadata: JSON.stringify(dadosAdicionais || {})
+        logoUrl: logoUrl || ''
+        // O campo metadata não existe no modelo ImobiliariaSite
+        // Os dadosAdicionais serão armazenados em outro lugar
       }
     });
 
     // Criar páginas padrão selecionadas pelo usuário
-    const paginasParaCriar = paginasSelecionadas || [TipoPagina.HOME, TipoPagina.IMOVEIS, TipoPagina.CONTATO];
+    // Mapeamento dos IDs do frontend para valores do enum TipoPagina
+    const paginasMapeamento: {[key: string]: TipoPagina} = {
+      'home': TipoPagina.HOME,
+      'imovel': TipoPagina.IMOVEL_SINGLE,
+      'imoveis': TipoPagina.IMOVEIS,
+      'sobre': TipoPagina.SOBRE,
+      'contato': TipoPagina.CONTATO,
+      'privacidade': TipoPagina.PRIVACIDADE,
+      'termos': TipoPagina.TERMOS,
+      'blog': TipoPagina.BLOG,
+      'faq': TipoPagina.FAQ,
+      'avaliacoes': TipoPagina.CUSTOM,
+      'parceiros': TipoPagina.CUSTOM,
+      'corretores': TipoPagina.CUSTOM,
+      'financiamento': TipoPagina.CUSTOM,
+      'cookies': TipoPagina.CUSTOM,
+      'reembolso': TipoPagina.CUSTOM
+    };
+    
+    // Garantir que estamos usando os valores do enum TipoPagina
+    const paginasParaCriar = paginasSelecionadas 
+      ? paginasSelecionadas.map((p: string | TipoPagina) => {
+          if (typeof p === 'string') {
+            // Converter para minúsculo para garantir que o mapeamento funcione
+            const idMapeado = paginasMapeamento[p.toLowerCase()];
+            return idMapeado || TipoPagina.CUSTOM;
+          }
+          return p;
+        })
+      : [TipoPagina.HOME, TipoPagina.IMOVEIS, TipoPagina.CONTATO];
     
     // Criar uma página para cada tipo selecionado
     for (const tipoPagina of paginasParaCriar) {
       await prisma.imobiliariaSitePagina.create({
         data: {
           siteId: novoSite.id,
-          tipo: tipoPagina,
+          tipo: tipoPagina as TipoPagina,
           titulo: obterTituloPagina(tipoPagina),
           slug: obterSlugPagina(tipoPagina),
           conteudo: JSON.stringify({
@@ -127,7 +173,15 @@ export async function POST(request: Request) {
 
     // Iniciar geração do site (em segundo plano)
     const siteGenerator = new SiteGenerator(novoSite.id);
-    siteGenerator.gerarSite();
+    // Usar o Promise.resolve para executar de maneira assíncrona sem bloquear o retorno da API
+    Promise.resolve().then(async () => {
+      try {
+        await siteGenerator.gerarSite();
+        console.log(`Geração do site ${novoSite.id} completada com sucesso!`);
+      } catch (error) {
+        console.error(`Erro na geração do site ${novoSite.id}:`, error);
+      }
+    });
 
     return NextResponse.json({ 
       success: true, 
@@ -171,7 +225,7 @@ export async function GET(request: Request) {
         imobiliariaId
       },
       orderBy: {
-        createdAt: 'desc'
+        criadoEm: 'desc'
       }
     });
 

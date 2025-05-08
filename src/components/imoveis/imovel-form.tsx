@@ -653,8 +653,20 @@ export function ImovelForm({
           </TabsContent>
           <TabsContent value="fotos" className="space-y-6">
             <Card>
-              <CardHeader>
+              <CardHeader className="flex flex-col gap-2">
                 <CardTitle>Galeria de Fotos</CardTitle>
+                {form.getValues('fotoPrincipal') && (
+                  <div className="mt-2">
+                    <p className="text-sm text-muted-foreground mb-2">Foto Principal:</p>
+                    <div className="relative h-40 w-full max-w-md overflow-hidden rounded-md border">
+                      <img 
+                        src={form.getValues('fotoPrincipal')} 
+                        alt="Foto Principal"
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                  </div>
+                )}
               </CardHeader>
               <CardContent>
                 <FormField

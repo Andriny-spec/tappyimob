@@ -1,25 +1,67 @@
 'use client';
 
-import { useState } from 'react';
-import { X, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { X, Loader2, CheckCircle, AlertCircle, Info } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cadastrarAssinante } from '@/lib/api/tappy';
+import { useSession } from 'next-auth/react';
 
 type EmailModalProps = {
   isOpen: boolean;
   onClose: () => void;
   planoId: string;
   planoNome: string;
+  planoIntervalo?: 'mensal' | 'anual';
 };
 
-export function PlanosEmailModal({ isOpen, onClose, planoId, planoNome }: EmailModalProps) {
+export function PlanosEmailModal({ isOpen, onClose, planoId, planoNome, planoIntervalo = 'mensal' }: EmailModalProps) {
+  const { data: session } = useSession();
   const [email, setEmail] = useState('');
   const [nome, setNome] = useState('');
+  const [telefone, setTelefone] = useState('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [mensagem, setMensagem] = useState('');
   const [kirvanoUrl, setKirvanoUrl] = useState('');
+  
+  // Preencher com os dados da sessão se disponível
+  useEffect(() => {
+    if (session?.user) {
+      setEmail(session.user.email || '');
+      setNome(session.user.name || '');
+    }
+  }, [session]);
+
+  // Aplicar máscara no telefone - versão corrigida
+  const handleTelefoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Pegar apenas os números
+    const numeros = e.target.value.replace(/\D/g, '');
+    
+    // Aplicar máscara de acordo com a quantidade de dígitos
+    let telefoneFormatado = numeros;
+    
+    if (numeros.length > 0) {
+      // Formatar DDD
+      telefoneFormatado = `(${numeros.slice(0, 2)}`;
+      
+      if (numeros.length > 2) {
+        // Adicionar fechamento do DDD
+        telefoneFormatado += ') ';
+        
+        // Adicionar o prefixo do telefone
+        if (numeros.length <= 7) {
+          // Adicionar apenas o que tem
+          telefoneFormatado += numeros.slice(2);
+        } else {
+          // Formatar com hífen para celular/fixo
+          telefoneFormatado += `${numeros.slice(2, 7)}-${numeros.slice(7, 11)}`;
+        }
+      }
+    }
+    
+    setTelefone(telefoneFormatado);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,22 +72,47 @@ export function PlanosEmailModal({ isOpen, onClose, planoId, planoNome }: EmailM
       return;
     }
     
+    if (!nome.trim()) {
+      setStatus('error');
+      setMensagem('Por favor, informe seu nome');
+      return;
+    }
+    
+    if (!telefone.trim() || telefone.length < 14) {
+      setStatus('error');
+      setMensagem('Por favor, informe um telefone válido');
+      return;
+    }
+    
     try {
       setStatus('loading');
       
       const resultado = await cadastrarAssinante({
         email: email.trim(),
-        nome: nome.trim() || undefined,
-        planoId
+        nome: nome.trim(),
+        telefone: telefone.trim().replace(/\D/g, ''),
+        planoId,
+        intervalo: planoIntervalo
       });
+      
+      console.log('Resposta da API:', resultado);
       
       if (resultado.success) {
         setStatus('success');
         setMensagem(resultado.message);
-        setKirvanoUrl(resultado.kirvanoUrl || '');
+        
+        // Garantir que temos uma URL para redirecionamento
+        if (resultado.kirvanoUrl) {
+          setKirvanoUrl(resultado.kirvanoUrl);
+          console.log('URL de redirecionamento definida:', resultado.kirvanoUrl);
+        } else {
+          console.warn('Sucesso, mas sem URL de redirecionamento');
+          setMensagem(resultado.message + ' Aguarde o redirecionamento para o pagamento...');
+        }
       } else {
         setStatus('error');
         setMensagem(resultado.message);
+        console.error('Erro na resposta da API:', resultado.message);
       }
     } catch (error) {
       setStatus('error');
@@ -55,8 +122,12 @@ export function PlanosEmailModal({ isOpen, onClose, planoId, planoNome }: EmailM
   };
 
   const handleContinuarParaPagamento = () => {
+    console.log('URL para redirecionamento:', kirvanoUrl);
     if (kirvanoUrl) {
-      window.location.href = kirvanoUrl;
+      // Abrir em nova aba para garantir que o redirecionamento funcione
+      window.open(kirvanoUrl, '_blank');
+    } else {
+      console.error('URL de pagamento não disponível');
     }
     onClose();
   };
@@ -95,6 +166,16 @@ export function PlanosEmailModal({ isOpen, onClose, planoId, planoNome }: EmailM
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4 py-4">
+            <div className="pb-3 mb-4 border-b">
+              <div className="flex items-start space-x-2 text-blue-600 bg-blue-50 p-3 rounded-md">
+                <Info className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                <p className="text-sm">
+                  Uma conta será criada automaticamente se você ainda não for cadastrado.
+                  A senha inicial será enviada para seu email.
+                </p>
+              </div>
+            </div>
+          
             <div className="space-y-2">
               <label htmlFor="email" className="text-sm font-medium">
                 Email *
@@ -102,26 +183,42 @@ export function PlanosEmailModal({ isOpen, onClose, planoId, planoNome }: EmailM
               <Input
                 id="email"
                 type="email"
-                placeholder="seu@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                placeholder="seu@email.com"
+                disabled={status === 'loading' || !!session?.user}
                 required
-                className="w-full"
-                disabled={status === 'loading'}
               />
             </div>
             
             <div className="space-y-2">
               <label htmlFor="nome" className="text-sm font-medium">
-                Nome (opcional)
+                Nome completo *
               </label>
               <Input
                 id="nome"
-                placeholder="Seu nome ou nome da imobiliária"
+                type="text"
                 value={nome}
                 onChange={(e) => setNome(e.target.value)}
-                className="w-full"
+                placeholder="Seu nome completo"
                 disabled={status === 'loading'}
+                required
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <label htmlFor="telefone" className="text-sm font-medium">
+                Telefone *
+              </label>
+              <Input
+                id="telefone"
+                type="text"
+                value={telefone}
+                onChange={handleTelefoneChange}
+                placeholder="(00) 00000-0000"
+                disabled={status === 'loading'}
+                required
+                maxLength={15}
               />
             </div>
 

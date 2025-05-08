@@ -276,7 +276,6 @@ export function LoginForm() {
           </div>
         </CardContent>
         
-     
       </Card>
       
       <div className="text-center mt-6 space-y-2">

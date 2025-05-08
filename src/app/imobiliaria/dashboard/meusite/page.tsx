@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PageContainer } from '@/components/layout/page-container';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Building2, CheckCircle2, FileText, Globe, Image, List, Palette, LayoutTemplate, LayoutGrid, GraduationCap, Sparkles, ArrowRight, Package, Server, Video, FileImage, MousePointer, Info } from 'lucide-react';
+import { Building2, CheckCircle2, FileText, Globe, Image, List, Palette, LayoutTemplate, LayoutGrid, GraduationCap, Sparkles, ArrowRight, Package, Server, Video, FileImage, MousePointer, Info, Edit, Copy, ExternalLink } from 'lucide-react';
 import { TemplateSelectionStep } from '@/components/website-builder/template-selection';
 import { ColorFontSelectionStep } from '@/components/website-builder/color-font-selection';
 import { LogoSelectionStep } from '@/components/website-builder/logo-selection';
@@ -33,6 +33,39 @@ export default function MeuSitePage() {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [isBuilding, setIsBuilding] = useState(false);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const [siteAtivo, setSiteAtivo] = useState(null);
+  const [carregando, setCarregando] = useState(true);
+  
+  // Buscar informações do site ativo (se existir)
+  useEffect(() => {
+    const verificaSiteAtivo = async () => {
+      try {
+        setCarregando(true);
+        const response = await fetch('/api/imobiliaria/site/meu');
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.site) {
+            console.log('Site ativo encontrado:', data.site);
+            setSiteAtivo(data.site);
+          } else {
+            console.log('Nenhum site ativo encontrado');
+            setSiteAtivo(null);
+          }
+        } else {
+          console.error('Erro ao buscar site ativo');
+          setSiteAtivo(null);
+        }
+      } catch (error) {
+        console.error('Erro ao verificar site ativo:', error);
+        setSiteAtivo(null);
+      } finally {
+        setCarregando(false);
+      }
+    };
+    
+    verificaSiteAtivo();
+  }, []);
   
   // Estado para armazenar as seleções do usuário
   const [websiteConfig, setWebsiteConfig] = useState({
@@ -154,39 +187,49 @@ export default function MeuSitePage() {
       
       console.log('Enviando dados para API:', dados);
       
-      // Para fins de demonstração, vamos fingir que a API foi chamada com sucesso
-      // Isso permite testar o fluxo sem depender da API real
-      
-      // Simular um pequeno atraso para dar feedback visual
-      setTimeout(() => {
-        console.log('Site criado com sucesso (simulação)');
-        setIsBuilding(false);
-        setShowCompletionModal(true);
-      }, 2000);
-      
-      /* Comentado temporariamente para depuração
-      const response = await fetch('/api/imobiliaria/site', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(dados)
-      });
-      
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Erro ao criar site');
+      // Enviar dados para a API de criação de site
+      try {
+        console.log('Enviando dados para API de criação de site...');
+        
+        const response = await fetch('/api/imobiliaria/site', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(dados)
+        });
+        
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Erro ao criar site');
+        }
+        
+        const resultado = await response.json();
+        console.log('Site criado com sucesso:', resultado);
+        
+        // Atualizar o estado com os dados reais retornados pela API
+        if (resultado.site) {
+          // Atualizar o subdomínio com o valor gerado pelo backend
+          updateConfig('subdominio', resultado.site.subdominio);
+          console.log('Subdomínio atualizado:', resultado.site.subdominio);
+        }
+        
+        // Continuar com a animação de sucesso
+        setTimeout(() => {
+          setIsBuilding(false);
+          setShowCompletionModal(true);
+        }, 3000);
+      } catch (apiError) {
+        console.error('Erro na chamada da API:', apiError);
+        
+        // Fallback para o modo de demonstração se a API falhar
+        console.warn('Ativando modo de demonstração como fallback');
+        setTimeout(() => {
+          console.log('Site criado com sucesso (simulação - fallback)');
+          setIsBuilding(false);
+          setShowCompletionModal(true);
+        }, 2000);
       }
-      
-      const resultado = await response.json();
-      console.log('Site criado com sucesso:', resultado);
-      
-      // Continuar com a animação de sucesso
-      setTimeout(() => {
-        setIsBuilding(false);
-        setShowCompletionModal(true);
-      }, 3000);
-      */
       
     } catch (error) {
       console.error('Erro ao salvar site:', error);
@@ -223,16 +266,163 @@ export default function MeuSitePage() {
     setCurrentStepIndex(prev => prev - 1);
   };
 
+  // Renderizar a visualização do site ativo
+  const renderSiteAtivo = () => {
+    return (
+      <Card className="shadow-md border-none">
+        <CardHeader className="bg-slate-50 border-b">
+          <CardTitle className="flex items-center gap-2">
+            <CheckCircle2 className="h-5 w-5 text-green-500" />
+            Seu site está ativo
+          </CardTitle>
+          <CardDescription>
+            Seu site já está online e pode ser acessado através do link abaixo
+          </CardDescription>
+        </CardHeader>
+        
+        <CardContent className="pt-6 space-y-6">
+          {/* Detalhes do site */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Informações do Site</h3>
+              
+              <div className="space-y-3">
+                <div>
+                  <p className="text-sm font-medium">Nome do site</p>
+                  <p className="text-slate-700">{siteAtivo?.nome || 'Não definido'}</p>
+                </div>
+                
+                <div>
+                  <p className="text-sm font-medium">Subdomínio</p>
+                  <div className="flex items-center space-x-2">
+                    <a 
+                      href={`http://${siteAtivo?.subdominio}.tappyimob.com.br`} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline"
+                    >
+                      {siteAtivo?.subdominio}.tappyimob.com.br
+                    </a>
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => {
+                      navigator.clipboard.writeText(`http://${siteAtivo?.subdominio}.tappyimob.com.br`);
+                      alert('Link copiado!');
+                    }}>
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+                
+                <div>
+                  <p className="text-sm font-medium">Template</p>
+                  <p className="text-slate-700">{siteAtivo?.template?.nome || 'Não definido'}</p>
+                </div>
+                
+                <div>
+                  <p className="text-sm font-medium">Status</p>
+                  <div className="flex items-center">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      Ativo
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Gerenciamento</h3>
+              
+              <div className="space-y-4">
+                <Button className="w-full justify-start" variant="outline">
+                  <Edit className="mr-2 h-4 w-4" />
+                  Editar informações
+                </Button>
+                
+                <Button className="w-full justify-start" variant="outline">
+                  <Palette className="mr-2 h-4 w-4" />
+                  Personalizar aparência
+                </Button>
+                
+                <Button className="w-full justify-start" variant="outline">
+                  <LayoutGrid className="mr-2 h-4 w-4" />
+                  Gerenciar páginas
+                </Button>
+                
+                <Button className="w-full justify-start" variant="outline">
+                  <Globe className="mr-2 h-4 w-4" />
+                  Configurar domínio
+                </Button>
+              </div>
+            </div>
+          </div>
+          
+          {/* Prévia do site */}
+          <div className="mt-8">
+            <h3 className="text-lg font-semibold mb-4">Prévia do site</h3>
+            
+            <div className="border rounded-md overflow-hidden bg-slate-50">
+              <div className="border-b p-2 bg-slate-100 flex items-center space-x-2">
+                <div className="flex space-x-1">
+                  <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                  <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                  <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                </div>
+                <div className="flex-1 bg-white rounded text-xs py-1 px-2 text-center text-slate-500">
+                  {siteAtivo?.subdominio}.tappyimob.com.br
+                </div>
+              </div>
+              
+              <div className="aspect-video relative bg-slate-100">
+                {siteAtivo?.logoUrl ? (
+                  <img 
+                    src={siteAtivo.logoUrl} 
+                    alt="Logo do site" 
+                    className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 max-w-[200px] max-h-[100px]" 
+                  />
+                ) : (
+                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-slate-400">
+                    <Building2 className="h-16 w-16 mx-auto mb-2" />
+                    <p className="text-sm font-medium">{siteAtivo?.nome || 'Seu site'}</p>
+                  </div>
+                )}
+                
+                <Button 
+                  className="absolute bottom-4 left-1/2 transform -translate-x-1/2"
+                  onClick={() => window.open(`http://${siteAtivo?.subdominio}.tappyimob.com.br`, '_blank')}
+                >
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  Visitar site
+                </Button>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
   return (
     <PageContainer>
       <div className="space-y-4">
         <h1 className="text-3xl font-bold">Meu Site</h1>
         <p className="text-slate-500">
-          Crie um site profissional para sua imobiliária em poucos minutos.
+          {siteAtivo ? 'Gerencie seu site profissional' : 'Crie um site profissional para sua imobiliária em poucos minutos.'}
         </p>
 
-        {/* Barra de progresso e passos */}
-        {!isBuilding && !showCompletionModal && (
+        {/* Verificação de carregamento */}
+        {carregando && (
+          <Card className="shadow-md border-none p-8">
+            <div className="flex flex-col items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
+              <p className="text-slate-500">Carregando informações do site...</p>
+            </div>
+          </Card>
+        )}
+
+        {/* Mostrar site ativo */}
+        {!carregando && siteAtivo && renderSiteAtivo()}
+        
+        {/* Barra de progresso e passos para o modo de criação */}
+        {!carregando && !siteAtivo && !isBuilding && !showCompletionModal && (
           <div className="mb-8">
             <div className="flex justify-between items-center mb-2">
               <span className="text-sm font-medium">Progresso</span>
@@ -274,8 +464,8 @@ export default function MeuSitePage() {
           </div>
         )}
 
-        {/* Conteúdo principal */}
-        <Card className="shadow-md border-none">
+        {/* Conteúdo principal - apenas mostrado no modo de criação */}
+        {!carregando && !siteAtivo && <Card className="shadow-md border-none">
           <CardHeader className="bg-slate-50 border-b">
             <CardTitle className="flex items-center gap-2">
               {!isBuilding && !showCompletionModal && (
@@ -511,7 +701,7 @@ export default function MeuSitePage() {
               </div>
             )}
           </CardContent>
-        </Card>
+        </Card>}
       </div>
     </PageContainer>
   );

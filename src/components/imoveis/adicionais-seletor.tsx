@@ -1,16 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Check, Plus, X } from 'lucide-react';
+import { Check, Plus, X, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-} from '@/components/ui/command';
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   Popover,
   PopoverContent,
@@ -32,6 +30,8 @@ interface AdicionaisSeletorProps {
 }
 
 export function AdicionaisSeletor({ values = [], onChange, disabled = false }: AdicionaisSeletorProps) {
+  // Garantir que values seja sempre um array
+  const safeValues = Array.isArray(values) ? values : [];
   const [open, setOpen] = useState(false);
   const [adicionais, setAdicionais] = useState<Adicional[]>([]);
   const [adicionaisSelecionados, setAdicionaisSelecionados] = useState<Adicional[]>([]);
@@ -41,13 +41,13 @@ export function AdicionaisSeletor({ values = [], onChange, disabled = false }: A
   useEffect(() => {
     async function carregarAdicionais() {
       try {
-        const response = await fetch('/api/adicionais');
+        const response = await fetch('/api/imobiliaria/adicionais');
         if (!response.ok) throw new Error('Falha ao carregar adicionais');
         const data = await response.json();
         setAdicionais(data);
         
-        if (values && values.length > 0) {
-          const selecionados = data.filter((a: Adicional) => values.includes(a.id));
+        if (safeValues.length > 0) {
+          const selecionados = data.filter((a: Adicional) => safeValues.includes(a.id));
           setAdicionaisSelecionados(selecionados);
         }
       } catch (error) {
@@ -58,25 +58,35 @@ export function AdicionaisSeletor({ values = [], onChange, disabled = false }: A
     }
 
     carregarAdicionais();
-  }, [values]);
+  }, [safeValues]);
+  
+  // Atualizar adicionaisSelecionados quando os valores mudarem
+  useEffect(() => {
+    if (adicionais.length > 0 && safeValues.length > 0) {
+      const selecionados = adicionais.filter((a) => safeValues.includes(a.id));
+      setAdicionaisSelecionados(selecionados);
+    } else if (safeValues.length === 0) {
+      setAdicionaisSelecionados([]);
+    }
+  }, [safeValues, adicionais]);
 
   const toggleAdicional = (adicionalId: string) => {
-    const novosSelecionados = values.includes(adicionalId)
-      ? values.filter(id => id !== adicionalId)
-      : [...values, adicionalId];
+    const novosSelecionados = safeValues.includes(adicionalId)
+      ? safeValues.filter(id => id !== adicionalId)
+      : [...safeValues, adicionalId];
     
     onChange(novosSelecionados);
   };
 
   const removerAdicional = (adicionalId: string) => {
-    onChange(values.filter(id => id !== adicionalId));
+    onChange(safeValues.filter(id => id !== adicionalId));
   };
 
   const adicionarNovoAdicional = async () => {
     if (!novoAdicional.trim()) return;
     
     try {
-      const response = await fetch('/api/adicionais', {
+      const response = await fetch('/api/imobiliaria/adicionais', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nome: novoAdicional })
@@ -86,7 +96,7 @@ export function AdicionaisSeletor({ values = [], onChange, disabled = false }: A
       
       const adicional = await response.json();
       setAdicionais(prev => [...prev, adicional]);
-      onChange([...values, adicional.id]);
+      onChange([...safeValues, adicional.id]);
       setNovoAdicional('');
     } catch (error) {
       console.error('Erro ao adicionar:', error);
@@ -125,9 +135,25 @@ export function AdicionaisSeletor({ values = [], onChange, disabled = false }: A
               Adicionar característica
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-96 p-0" align="start">
-            <Command>
-              <CommandInput placeholder="Buscar adicional..." />
+          <PopoverContent className="w-96 p-0" align="start" onInteractOutside={(e) => e.preventDefault()}>
+            <div className="sr-only">
+              <DialogTitle>Gerenciar Adicionais</DialogTitle>
+            </div>
+            <div className="flex flex-col w-full">
+              <div className="flex items-center gap-2 border-b px-3 py-2">
+                <Search className="h-4 w-4 shrink-0 opacity-50" />
+                <Input
+                  className="h-8 flex-1 border-none shadow-none focus-visible:ring-0"
+                  placeholder="Buscar adicional..."
+                  onChange={(e) => {
+                    const valor = e.target.value.toLowerCase();
+                    const filtrados = adicionais.filter(a => 
+                      a.nome.toLowerCase().includes(valor));
+                    setAdicionais(filtrados.length > 0 ? filtrados : adicionais);
+                  }}
+                />
+              </div>
+              
               <div className="border-t px-3 py-2">
                 <div className="flex items-center gap-2">
                   <Input
@@ -146,31 +172,38 @@ export function AdicionaisSeletor({ values = [], onChange, disabled = false }: A
                   </Button>
                 </div>
               </div>
-              <CommandEmpty>
-                {loading ? "Carregando..." : "Nenhum adicional encontrado."}
-              </CommandEmpty>
-              <CommandGroup className="max-h-60 overflow-auto">
-                <ScrollArea className="h-[200px]">
-                  {adicionais.map((adicional) => (
-                    <CommandItem
-                      key={adicional.id}
-                      value={adicional.id}
-                      onSelect={() => toggleAdicional(adicional.id)}
-                    >
-                      <div className="flex items-center gap-2 w-full">
-                        {adicional.nome}
-                      </div>
-                      <Check
+              
+              <ScrollArea className="h-[200px] py-1">
+                {loading ? (
+                  <div className="py-6 text-center text-sm">Carregando...</div>
+                ) : adicionais.length === 0 ? (
+                  <div className="py-6 text-center text-sm">Nenhum adicional encontrado.</div>
+                ) : (
+                  <div className="space-y-1 p-1">
+                    {adicionais.map((adicional) => (
+                      <div
+                        key={adicional.id}
                         className={cn(
-                          "ml-auto h-4 w-4",
-                          values.includes(adicional.id) ? "opacity-100" : "opacity-0"
+                          "flex items-center justify-between rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground",
+                          "cursor-pointer"
                         )}
-                      />
-                    </CommandItem>
-                  ))}
-                </ScrollArea>
-              </CommandGroup>
-            </Command>
+                        onClick={() => toggleAdicional(adicional.id)}
+                      >
+                        <div className="flex items-center gap-2 w-full">
+                          {adicional.nome}
+                        </div>
+                        <Check
+                          className={cn(
+                            "ml-auto h-4 w-4",
+                            safeValues.includes(adicional.id) ? "opacity-100" : "opacity-0"
+                          )}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </ScrollArea>
+            </div>
           </PopoverContent>
         </Popover>
       )}

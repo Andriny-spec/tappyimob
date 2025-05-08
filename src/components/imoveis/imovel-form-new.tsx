@@ -49,6 +49,7 @@ const imovelSchema = z.object({
   vagas: z.coerce.number().min(0, 'Número de vagas inválido').optional(),
   andar: z.coerce.number().min(0, 'Andar inválido').optional(),
   endereco: z.string().min(5, 'Endereço completo obrigatório'),
+  numero: z.string().min(1, 'Número obrigatório'),
   bairro: z.string().min(2, 'Bairro obrigatório'),
   cidade: z.string().min(2, 'Cidade obrigatória'),
   estado: z.string().min(2, 'Estado obrigatório'),
@@ -150,6 +151,7 @@ export function ImovelForm({
       vagas: imovel?.vagas || 0,
       andar: imovel?.andar || 0,
       endereco: imovel?.endereco || '',
+      numero: imovel?.numero || '',
       bairro: imovel?.bairro || '',
       cidade: imovel?.cidade || '',
       estado: imovel?.estado || '',
@@ -450,11 +452,29 @@ export function ImovelForm({
                         control={form.control}
                         name="endereco"
                         render={({ field }) => (
-                          <FormItem className="col-span-2">
-                            <FormLabel>Endereço</FormLabel>
+                          <FormItem>
+                            <FormLabel>Logradouro</FormLabel>
                             <FormControl>
                               <Input 
-                                placeholder="Rua, número" 
+                                placeholder="Rua, Avenida" 
+                                {...field} 
+                                disabled={isReadOnly} 
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="numero"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Número</FormLabel>
+                            <FormControl>
+                              <Input 
+                                placeholder="123" 
                                 {...field} 
                                 disabled={isReadOnly} 
                               />

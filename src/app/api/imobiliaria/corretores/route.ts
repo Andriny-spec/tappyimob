@@ -102,8 +102,15 @@ export async function POST(req: NextRequest) {
     const dados = await req.json();
 
     // Validar os dados necessários
-    if (!dados.nome || !dados.email || !dados.senha) {
-      return NextResponse.json({ error: "Dados incompletos" }, { status: 400 });
+    if (!dados.nome || !dados.email) {
+      return NextResponse.json({ error: "Nome e email são obrigatórios" }, { status: 400 });
+    }
+    
+    // Definir senha padrão se não for fornecida
+    if (!dados.senha) {
+      // Usar os primeiros 6 caracteres do email como senha padrão
+      dados.senha = dados.email.substring(0, 6) + '123';
+      console.log('Senha padrão gerada para o corretor:', dados.senha);
     }
 
     // Verificar se o e-mail já está em uso

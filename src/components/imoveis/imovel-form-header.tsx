@@ -31,8 +31,8 @@ export function ImovelFormHeader({
 
   return (
     <>
-      <div className="flex items-center justify-between border-b p-4 sticky top-0 bg-white z-10">
-        <h2 className="text-xl font-semibold">
+      <div className="flex items-center justify-between border-b px-6 py-5 sticky top-0 bg-white z-10">
+        <h2 className="text-2xl font-bold">
           {isEditing ? 'Editar Imóvel' : 'Adicionar Novo Imóvel'}
         </h2>
         <div className="flex items-center gap-2">
