@@ -124,10 +124,15 @@ export function PlanosEmailModal({ isOpen, onClose, planoId, planoNome, planoInt
   const handleContinuarParaPagamento = () => {
     console.log('URL para redirecionamento:', kirvanoUrl);
     if (kirvanoUrl) {
-      // Abrir em nova aba para garantir que o redirecionamento funcione
-      window.open(kirvanoUrl, '_blank');
+      // Usar window.location.href para garantir redirecionamento na mesma aba
+      // Isso evita problemas com bloqueadores de pop-up
+      setTimeout(() => {
+        window.location.href = kirvanoUrl;
+      }, 500);
     } else {
       console.error('URL de pagamento não disponível');
+      // Redirecionamento de fallback para o checkout gérico
+      window.location.href = `https://tappy.id/checkout/${planoId}`;
     }
     onClose();
   };

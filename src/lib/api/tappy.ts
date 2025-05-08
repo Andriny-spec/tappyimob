@@ -31,8 +31,9 @@ export type CadastroAssinanteProps = {
  */
 export async function buscarPlanos(): Promise<Plano[]> {
   try {
-    // URL do site principal - usando o mesmo endpoint do TappyLink mas filtrando para tappyimob
-    const url = 'https://tappy.id/api/planos/publico?plataforma=tappy-imob';
+    // URL do novo endpoint específico para o TappyImob
+    const url = 'https://www.tappy.id/api/planos/tappyimob';
+    console.log('Buscando planos em:', url);
     
     const res = await fetch(url, {
       method: 'GET',
@@ -48,14 +49,33 @@ export async function buscarPlanos(): Promise<Plano[]> {
 
     const data = await res.json();
     
-    // Filtrar apenas os planos da plataforma tappy-imob
+    console.log('Resposta da API de planos:', data);
+    
+    // Processar os dados para pegar todos os planos, já que filtraremos pelo platformId depois
+    let planos: Plano[] = [];
+    
     if (Array.isArray(data)) {
-      return data.filter((plano: Plano) => plano.platformId === 'tappy-imob');
+      planos = data;
     } else if (data.planos && Array.isArray(data.planos)) {
-      return data.planos.filter((plano: Plano) => plano.platformId === 'tappy-imob');
+      planos = data.planos;
     }
     
-    return [];
+    // Filtrar planos da plataforma tappy-imob
+    const planosImob = planos.filter((plano: Plano) => 
+      plano.platformId === 'tappy-imob' || 
+      plano.platform?.slug === 'tappyimob' ||
+      (plano.platform?.name && plano.platform.name.toLowerCase().includes('imob'))
+    );
+    
+    console.log('Planos filtrados para tappy-imob:', planosImob);
+    
+    // Se não encontrar nenhum plano com o filtro mais restritivo, retornar todos
+    if (planosImob.length === 0) {
+      console.log('Nenhum plano encontrado com filtro estrito. Retornando todos os planos.');
+      return planos;
+    }
+    
+    return planosImob;
   } catch (error) {
     console.error("Erro ao buscar planos:", error);
     // Retornar array vazio em caso de erro
@@ -73,8 +93,10 @@ export async function cadastrarAssinante(dados: CadastroAssinanteProps): Promise
   kirvanoUrl?: string;
 }> {
   try {
-    // URL do site principal - mudando para o endpoint correto
-    const url = 'https://tappy.id/api/assinatura/checkout/imob';
+    // Usando endpoint de proxy local com URL absoluta
+    // Detecta automaticamente se estamos em desenvolvimento ou produção
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
+    const url = `${baseUrl}/api/checkout`;
     
     const res = await fetch(url, {
       method: 'POST',
@@ -86,11 +108,8 @@ export async function cadastrarAssinante(dados: CadastroAssinanteProps): Promise
         name: dados.nome,
         phone: dados.telefone.replace(/\D/g, ''),
         planId: dados.planoId,
-        interval: dados.intervalo === 'anual' ? 'yearly' : 'monthly',
-        companyType: 'IMOBILIARIA',
-        origin: 'tappyimob-site',
-        platform: 'tappy-imob',
-        redirectUrl: 'https://tappyimob.com.br/sucesso'
+        type: 'IMOBILIARIA',
+        origin: 'tappyimob-site'
       }),
     });
     

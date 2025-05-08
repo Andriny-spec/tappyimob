@@ -114,7 +114,14 @@ export function Planos() {
       try {
         setCarregando(true);
         const dados = await buscarPlanos();
-        setPlanosAPI(dados);
+        
+        if (dados && dados.length > 0) {
+          console.log('Planos carregados da API:', dados);
+          setPlanosAPI(dados);
+        } else {
+          console.error('API retornou array vazio de planos');
+          setErro('Não foi possível encontrar planos disponíveis no momento.');
+        }
       } catch (error) {
         console.error('Erro ao carregar planos:', error);
         setErro('Não foi possível carregar os planos. Por favor, tente novamente mais tarde.');
@@ -126,7 +133,10 @@ export function Planos() {
     carregarPlanos();
   }, []);
   
+  console.log('Estado dos planos API:', planosAPI);
+
   // Mapeamento de planos da API para o formato de exibição
+  // Usar planos da API se existirem, caso contrário usar os mockados
   const planosInfo: Record<string, PlanoInfo> = planosAPI.length > 0 ? planosAPI.reduce((acc: Record<string, PlanoInfo>, plano) => {
     // Identificar qual ícone usar com base no nome do plano
     let icon;
@@ -168,7 +178,7 @@ export function Planos() {
         recursosFaltantes
       }
     };
-  }, {}) : planosInfoPadrao;
+  }, {}) : planosInfoPadrao; // Temporariamente usar planos mockados até que a API retorne planos reais
 
   // Animações para os cards
   const cardVariants = {
