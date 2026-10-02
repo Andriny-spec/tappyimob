@@ -1,0 +1,14 @@
+export { Hero } from "./Hero";
+export { HeroHome } from "./HeroHome";
+export { TiposCarrossel } from "./TiposCarrossel";
+export { ImoveisCarrossel } from "./ImoveisCarrossel";
+export { ImoveisDestaque } from "./ImoveisDestaque";
+export { ImoveisDestaqueEspecial } from "./ImoveisDestaqueEspecial";
+export { GaleriaInsta } from "./GaleriaInsta";
+export { CTACorretor } from "./CTACorretor";
+export { NoticiasCarrossel } from "./NoticiasCarrossel";
+export { Recursos } from "./Recursos";
+export { Imoveis } from "./Imoveis";
+export { CTACentral } from "./CTACentral";
+export { Planos } from "./Planos";
+export { CTAFooter } from "./CTAFooter";

@@ -1,0 +1,3507 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model LeadTag {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  slug        String   @unique
+  color       String   @default("#6B7280")
+  icon        String?
+  description String?
+  usageCount  Int      @default(0)
+  isSystem    Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String?
+
+  @@map("lead_tags")
+}
+
+model LeadQueue {
+  id                  String                @id @default(cuid())
+  name                String
+  description         String?
+  isActive            Boolean               @default(true)
+  rotationType        String                @default("ROUND_ROBIN")
+  rules               Json?
+  workingHours        Json?
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  responseTimeMinutes Int?
+  delayRules          Json?
+  assignments         LeadQueueAssignment[]
+  members             LeadQueueMember[]
+
+  @@map("lead_queues")
+}
+
+model LeadQueueMember {
+  id              String    @id @default(cuid())
+  weight          Int       @default(1)
+  isActive        Boolean   @default(true)
+  isPaused        Boolean   @default(false)
+  pausedUntil     DateTime?
+  pauseReason     String?
+  maxLeadsPerDay  Int?
+  maxLeadsPerWeek Int?
+  maxActiveLeads  Int?
+  leadsToday      Int       @default(0)
+  leadsThisWeek   Int       @default(0)
+  totalLeads      Int       @default(0)
+  lastLeadAt      DateTime?
+  lastTurnAt      DateTime?
+  turnOrder       Int       @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  queueId         String
+  userId          String
+  queue           LeadQueue @relation(fields: [queueId], references: [id], onDelete: Cascade)
+  user            User      @relation("QueueMember", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([queueId, userId])
+  @@map("lead_queue_members")
+}
+
+model LeadQueueAssignment {
+  id                 String    @id @default(cuid())
+  status             String    @default("PENDING")
+  assignedAt         DateTime  @default(now())
+  acceptedAt         DateTime?
+  rejectedAt         DateTime?
+  expiresAt          DateTime?
+  reason             String?
+  queueId            String
+  leadId             String
+  assignedToId       String
+  assignedById       String?
+  previousAssigneeId String?
+  queue              LeadQueue @relation(fields: [queueId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+  @@index([assignedToId])
+  @@map("lead_queue_assignments")
+}
+
+model LeadDuplicate {
+  id           String    @id @default(cuid())
+  matchType    String
+  matchScore   Int       @default(100)
+  status       String    @default("PENDING")
+  resolvedAt   DateTime?
+  resolvedById String?
+  resolution   String?
+  leadId1      String
+  leadId2      String
+  corretor1Id  String?
+  corretor2Id  String?
+  createdAt    DateTime  @default(now())
+
+  @@unique([leadId1, leadId2])
+  @@index([status])
+  @@map("lead_duplicates")
+}
+
+model LeadAutomation {
+  id             String    @id @default(cuid())
+  name           String
+  description    String?
+  triggerType    String
+  triggerConfig  Json
+  actionType     String
+  actionConfig   Json
+  isActive       Boolean   @default(true)
+  priority       Int       @default(0)
+  executionCount Int       @default(0)
+  lastExecutedAt DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@map("lead_automations")
+}
+
+model LeadAutomationLog {
+  id           String   @id @default(cuid())
+  automationId String
+  leadId       String
+  status       String
+  result       Json?
+  error        String?
+  executedAt   DateTime @default(now())
+
+  @@index([automationId])
+  @@index([leadId])
+  @@map("lead_automation_logs")
+}
+
+model LeadEnrichment {
+  id            String   @id @default(cuid())
+  provider      String
+  data          Json
+  status        String   @default("SUCCESS")
+  error         String?
+  cost          Float?
+  createdAt     DateTime @default(now())
+  leadId        String
+  requestedById String?
+
+  @@index([leadId])
+  @@index([provider])
+  @@map("lead_enrichments")
+}
+
+model LeadFollowUp {
+  id           String    @id @default(cuid())
+  type         String
+  status       String    @default("PENDING")
+  scheduledFor DateTime
+  sentAt       DateTime?
+  completedAt  DateTime?
+  message      String?
+  channel      String?
+  leadId       String
+  visitId      String?
+  assignedToId String?
+  createdAt    DateTime  @default(now())
+
+  @@index([leadId])
+  @@index([status])
+  @@index([scheduledFor])
+  @@map("lead_follow_ups")
+}
+
+model User {
+  id                        String                    @id @default(cuid())
+  email                     String                    @unique
+  password                  String
+  name                      String
+  phone                     String?
+  avatar                    String?
+  role                      Role                      @default(CLIENTE)
+  creci                     String?
+  bio                       String?
+  // Dados do parceiro externo (corretor/imobiliária)
+  cpf                       String?
+  rg                        String?
+  birthDate                 DateTime?
+  maritalStatus             String?
+  addressFull               String?
+  partnerType               String?                   // AUTONOMO | IMOBILIARIA
+  agencyName                String?                   // nome da imobiliária (se IMOBILIARIA)
+  pixKey                    String?
+  // Dados bancários do parceiro (repasse de comissão)
+  bankName                  String?                   // banco
+  bankAgency                String?                   // agência
+  bankAccount               String?                   // conta
+  bankAccountType           String?                   // CORRENTE | POUPANCA
+  isActive                  Boolean                   @default(true)
+  deletedAt                 DateTime?
+  emailVerified             DateTime?
+  region                    String?
+  rating                    Float                     @default(0)
+  ratingCount               Int                       @default(0)
+  totalSales                Int                       @default(0)
+  totalValue                Float                     @default(0)
+  conversionRate            Float                     @default(0)
+  createdAt                 DateTime                  @default(now())
+  updatedAt                 DateTime                  @updatedAt
+  allowedModules            String[]                  @default([])
+  tokenInvalidatedAt        DateTime?
+  comissoes                 Comissao[]
+  contracts                 Contract[]                @relation("ContractCorretor")
+  negocios                  Negocio[]                 @relation("NegocioCorretor")
+  favorites                 Favorite[]
+  leadActivities            LeadActivity[]            @relation("LeadActivityUser")
+  leadImportsAsCorretor     LeadImport[]              @relation("LeadImportCorretor")
+  leadImports               LeadImport[]              @relation("LeadImports")
+  queueMemberships          LeadQueueMember[]         @relation("QueueMember")
+  leads                     Lead[]                    @relation("LeadCorretor")
+  leadsCreated              Lead[]                    @relation("LeadCreatedBy")
+  metas                     Meta[]
+  mindMaps                  MindMap[]
+  notifications             Notification[]
+  ownerContactLogs          OwnerContactLog[]         @relation("OwnerContactLogs")
+  uploadedMedia             PhotoSessionMedia[]
+  photographerSlots         PhotoSessionSlot[]        @relation("PhotographerSlots")
+  brokerSessions            PhotoSession[]            @relation("BrokerSessions")
+  photographerSessions      PhotoSession[]            @relation("PhotographerSessions")
+  posts                     Post[]
+  propertiesConfirmed       Property[]                @relation("AvailabilityConfirmer")
+  properties                Property[]                @relation("PropertyOwner")
+  propertiesUpdated         Property[]                @relation("PropertyUpdater")
+  propertyActivityLogs      PropertyActivityLog[]     @relation("PropertyActivityLogs")
+  propertyObservations      PropertyObservation[]
+  priceChanges              PropertyPriceHistory[]    @relation("PriceChangedBy")
+  propertyProposals         PropertyProposal[]        @relation("ProposalCorretor")
+  timelineAssignments       PropertyTimeline[]        @relation("TimelineAssignedTo")
+  timelineCompletions       PropertyTimeline[]        @relation("TimelineCompletedBy")
+  scheduledVisitsAsCorretor ScheduledVisit[]          @relation("VisitCorretor")
+  scheduledVisitsCreated    ScheduledVisit[]          @relation("VisitCreator")
+  storageFileGranted        StorageFilePermission[]   @relation("StorageFilePermissionsGranted")
+  storageFilePerms          StorageFilePermission[]   @relation("StorageFilePermissions")
+  storageFiles              StorageFile[]
+  storageFolderGranted      StorageFolderPermission[] @relation("StorageFolderPermissionsGranted")
+  storageFolderPerms        StorageFolderPermission[] @relation("StorageFolderPermissions")
+  storageFolders            StorageFolder[]
+  tasksAssigned             Task[]                    @relation("TaskAssignedTo")
+  tasksCreated              Task[]                    @relation("TaskCreatedBy")
+  visits                    Visit[]
+  tappyIAConversations    TappyIAConversation[]
+  profileLogs               UserProfileLog[]
+  passwordResetTokens       PasswordResetToken[]
+  pushTokens                PushToken[]
+
+  @@map("users")
+}
+
+// Histórico de edições cadastrais do usuário (Meus Dados)
+model UserProfileLog {
+  id        String   @id @default(cuid())
+  userId    String
+  field     String   // campo alterado (ex: phone, email, bankAccount)
+  oldValue  String?
+  newValue  String?
+  changedBy String?  // quem alterou (id do usuário; normalmente o próprio)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("user_profile_logs")
+}
+
+// Tokens de recuperação de senha (fluxo "esqueceu a senha")
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique // hash SHA-256 do token enviado por e-mail
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("password_reset_tokens")
+}
+
+// Tokens de push notification do app (Expo). Um usuário pode ter vários
+// aparelhos; cada token é único por instalação.
+model PushToken {
+  id        String    @id @default(cuid())
+  userId    String
+  token     String    @unique // token Expo (ExponentPushToken[...])
+  platform  String    @default("android") // "ios" | "android"
+  deviceId  String?
+  lastUsedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([platform])
+  @@map("push_tokens")
+}
+
+model TappyIAConversation {
+  id        String              @id @default(cuid())
+  userId    String
+  title     String              @default("Nova conversa")
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages  TappyIAMessage[]
+
+  @@index([userId, updatedAt])
+  @@map("tappy_ia_conversations")
+}
+
+model TappyIAMessage {
+  id             String   @id @default(cuid())
+  conversationId String
+  role           String   // "user" | "assistant"
+  content        String   @db.Text
+  audioUrl       String?  @db.Text
+  imageUrl       String?  @db.Text
+  imagePrompt    String?  @db.Text
+  imageSize      String?
+  imageModel     String?
+  properties     Json?
+  propertyPhotos Json?
+  createdAt      DateTime @default(now())
+
+  conversation TappyIAConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+  @@map("tappy_ia_messages")
+}
+
+model Condominium {
+  id                       String           @id @default(cuid())
+  name                     String
+  slug                     String?          @unique
+  description              String?
+  condoCategory            String           @default("RESIDENCIAL")
+  condoType                String           @default("VERTICAL")
+  builderId                String?
+  address                  String?
+  number                   String?
+  neighborhood             String?
+  city                     String?
+  state                    String?
+  zipCode                  String?
+  latitude                 Float?
+  longitude                Float?
+  fakeAddress              String?
+  fakeNumber               String?
+  fakeNeighborhood         String?
+  fakeCity                 String?
+  fakeState                String?
+  fakeZipCode              String?
+  showRealAddress          Boolean          @default(false)
+  totalUnits               Int?
+  totalLots                Int?
+  yearBuilt                Int?
+  builder                  String?
+  availableSizes           String[]
+  hasApartment             Boolean          @default(false)
+  hasCobertura             Boolean          @default(false)
+  hasGarden                Boolean          @default(false)
+  hasFlat                  Boolean          @default(false)
+  hasStudio                Boolean          @default(false)
+  hasHouse                 Boolean          @default(false)
+  hasCasaTerrea            Boolean          @default(false)
+  hasSobrado               Boolean          @default(false)
+  hasTerrain               Boolean          @default(false)
+  hasCommercial            Boolean          @default(false)
+  amenities                String[]
+  hasSportsAdvisory        Boolean          @default(false)
+  activityScheduleImage    String?
+  adminName                String?
+  adminPhone               String?
+  adminEmail               String?
+  porterPhone              String?
+  contacts                 Json?
+  managementCompany        String?
+  managementCompanyPhone   String?
+  managementCompanyEmail   String?
+  managementCompanyWebsite String?
+  isLaunchProject          Boolean          @default(false)
+  launchStage              String?
+  expectedDelivery         DateTime?
+  launchDescription        String?
+  thumbnail                String?
+  images                   String[]
+  videos                   String[]
+  virtualTour              String?
+  internalMap              String?
+  maps                     Json?
+  implantation             String?
+  floorPlans               Json?
+  metaTitle                String?
+  metaDescription          String?
+  isActive                 Boolean          @default(true)
+  isFeatured               Boolean          @default(false)
+  createdAt                DateTime         @default(now())
+  updatedAt                DateTime         @updatedAt
+  towers                   CondoTower[]
+  builderPartner           BusinessPartner? @relation("CondominiumBuilder", fields: [builderId], references: [id])
+  properties               Property[]
+
+  @@map("condominiums")
+}
+
+model CondoTower {
+  id             String      @id @default(cuid())
+  name           String
+  floors         Int?
+  unitsPerFloor  Int?
+  totalUnits     Int?
+  availableSizes String[]
+  condominiumId  String
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  condominium    Condominium @relation(fields: [condominiumId], references: [id], onDelete: Cascade)
+
+  @@map("condo_towers")
+}
+
+model PropertyCustomOption {
+  id        Int      @id @default(autoincrement())
+  category  String
+  value     String
+  hidden    Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([category, value])
+  @@map("property_custom_options")
+}
+
+model Property {
+  id                        String                   @id @default(cuid())
+  code                      String                   @unique
+  title                     String
+  marketplaceTitle          String?
+  slug                      String?                  @unique
+  description               String
+  shortDescription          String?
+  condoDescription          String?
+  exchangeDescription       String?
+  condominiumId             String?
+  towerName                 String?
+  unitNumber                String?
+  propertyClass             PropertyClass            @default(RESIDENCIAL)
+  type                      PropertyType
+  subType                   PropertySubType?
+  category                  PropertyCategory         @default(VENDA)
+  condition                 PropertyCondition        @default(USADO)
+  expectedCompletionDate    DateTime?
+  status                    PropertyStatus           @default(DISPONIVEL)
+  saleStatus                FinalityStatus?
+  rentalStatus              FinalityStatus?
+  price                     Float
+  rentPrice                 Float?
+  seasonalPrice             Float?
+  auctionPrice              Float?
+  pricePerM2                Float?
+  condoFee                  Float?
+  condoFeeExempt            Boolean                  @default(false)
+  iptu                      Float?
+  iptuPeriod                String?                  @default("ANUAL")
+  foro                      Float?
+  foroExempt                Boolean                  @default(false)
+  isNegotiable              Boolean                  @default(true)
+  acceptsExchange           Boolean                  @default(false)
+  exchangeType              String?
+  exchangeTypes             String[]
+  exchangeLocations         String[]
+  exchangeMinValue          Float?
+  exchangeMaxValue          Float?
+  acceptsFinancing          Boolean                  @default(true)
+  acceptsFGTS               Boolean                  @default(false)
+  acceptsDirectPayment      Boolean                  @default(false)
+  directPaymentMonths       Int?
+  hasFinancingBalance       Boolean                  @default(false)
+  financingBalance          Float?
+  financingBank             String?
+  hasIrregularDocs          Boolean                  @default(false)
+  irregularDocsNotes        String?
+  isCornerHouse             Boolean?
+  hasNonBuildableArea       Boolean?
+  area                      Float
+  totalArea                 Float?
+  usefulArea                Float?
+  bedrooms                  Int                      @default(0)
+  suites                    Int                      @default(0)
+  bathrooms                 Int                      @default(0)
+  parkingSpaces             Int                      @default(0)
+  coveredParkingSpaces      Int?
+  floor                     Int?
+  totalFloors               Int?
+  unitsPerFloor             Int?
+  position                  String?
+  sunPosition               String?
+  yearBuilt                 Int?
+  propertyAge               String?
+  address                   String
+  number                    String?
+  complement                String?
+  neighborhood              String
+  city                      String
+  state                     String
+  country                   String                   @default("Brasil")
+  zipCode                   String?
+  latitude                  Float?
+  longitude                 Float?
+  addressVisibility         AddressVisibility        @default(COMPLETO)
+  thumbnail                 String?
+  images                    String[]
+  videos                    String[]
+  videoYoutube              String?
+  virtualTour               String?
+  plants                    String[]
+  amenities                 String[]
+  features                  String[]
+  extras                    String[]
+  nearbyPlaces              String[]
+  hasElevator               Boolean                  @default(false)
+  isFurnished               Boolean                  @default(false)
+  hasGroundFloorSuite       Boolean                  @default(false)
+  hasFreeView               Boolean                  @default(false)
+  acceptsPets               Boolean?
+  rentalWarranties          String[]
+  landTopography            String?
+  landFrontWidth            Float?
+  landDepth                 Float?
+  hasApprovedProject        Boolean?
+  isGroundFloor             Boolean?
+  metaTitle                 String?
+  metaDescription           String?
+  tags                      String[]
+  rating                    Float                    @default(0)
+  ratingCount               Int                      @default(0)
+  hasPlate                  Boolean                  @default(false)
+  isOccupied                Boolean                  @default(false)
+  showOnWebsite             Boolean                  @default(true)
+  isOffMarket               Boolean                  @default(false)
+  activePortals             String[]
+  portalPositions           Json?
+  isFeatured                Boolean                  @default(false)
+  isExclusive               Boolean                  @default(false)
+  isThirdPartyExclusive     Boolean                  @default(false)
+  exclusivityManagerId      String?
+  isNew                     Boolean                  @default(false)
+  isSuperFeatured           Boolean                  @default(false)
+  portalHighlight           String?
+  highlights                String[]
+  websiteCategories         String[]
+  hasPartnerCondition       Boolean                  @default(false)
+  partnerConditionType      String?
+  partnerConditionValue     String?
+  partnerConditionDesc      String?
+  partnerConditionExpiry    DateTime?
+  views                     Int                      @default(0)
+  portalViews               Int                      @default(0)
+  clicks                    Int                      @default(0)
+  favorites                 Int                      @default(0)
+  shares                    Int                      @default(0)
+  inPersonVisits            Int                      @default(0)
+  proposalsCount            Int                      @default(0)
+  soldBy                    String?
+  soldAt                    DateTime?
+  soldPrice                 Float?
+  soldNotes                 String?
+  rentedBy                  String?
+  rentedAt                  DateTime?
+  rentedPrice               Float?
+  rentedNotes               String?
+  followUpDate              DateTime?
+  followUpMonths            Int?
+  suspensionDays            Int?
+  suspensionStartDate       DateTime?
+  suspensionEndDate         DateTime?
+  suspensionReason          String?
+  brokerNotes               String?
+  createdAt                 DateTime                 @default(now())
+  updatedAt                 DateTime                 @updatedAt
+  publishedAt               DateTime?
+  expiresAt                 DateTime?
+  ownerId                   String
+  parentPropertyId          String?
+  propertyOwnerId           String?
+  prefeituraOwnerName       String?
+  prefeituraOwnerCpf        String?
+  prefeituraInscricao       String?
+  prefeituraData            Json?
+  lastAvailabilityCheck     DateTime?
+  availabilityConfirmedById String?
+  exclusivityManagerType    String?
+  ownerNickname             String?
+  hasWall                   Boolean?
+  websitePublishMode        String?
+  ownerFeedbackIntervalDays Int?                     @default(7)
+  ownerFeedbackStatus       String?                  @default("EM_DIA")
+  ownerLastFeedbackDate     DateTime?
+  hasWatermark              Boolean                  @default(false)
+  updatedById               String?
+  hasProfessionalPhotos     Boolean                  @default(false)
+  ownerProfiles             String[]
+  partnerApprovalStatus     PartnerApprovalStatus?
+  partnerSubmittedById      String?
+  partnerSubmittedAt        DateTime?
+  partnerEditableUntil      DateTime?
+  contracts                 Contract[]               @relation("ContractProperty")
+  favoritesList             Favorite[]
+  leadProperties            LeadProperty[]           @relation("LeadProperties")
+  leadsList                 Lead[]
+  ownerContactLogs          OwnerContactLog[]
+  photoSessions             PhotoSession[]
+  availabilityConfirmedBy   User?                    @relation("AvailabilityConfirmer", fields: [availabilityConfirmedById], references: [id])
+  condominium               Condominium?             @relation(fields: [condominiumId], references: [id])
+  owner                     User                     @relation("PropertyOwner", fields: [ownerId], references: [id])
+  parentProperty            Property?                @relation("PropertyVariations", fields: [parentPropertyId], references: [id])
+  variations                Property[]               @relation("PropertyVariations")
+  propertyOwner             PropertyOwner?           @relation(fields: [propertyOwnerId], references: [id])
+  updatedBy                 User?                    @relation("PropertyUpdater", fields: [updatedById], references: [id])
+  activityLogs              PropertyActivityLog[]
+  changelog                 PropertyChangelog[]
+  documents                 PropertyDocument?
+  evaluations               PropertyEvaluation[]
+  exclusivity               PropertyExclusivity?
+  observations              PropertyObservation[]
+  ownerHistory              PropertyOwnerHistory[]
+  priceHistory              PropertyPriceHistory[]
+  proposals                 PropertyProposal[]
+  timeline                  PropertyTimeline[]
+  viewLogs                  PropertyViewLog[]
+  visitRecords              PropertyVisitRecord[]
+  scheduledVisitProperties  ScheduledVisitProperty[]
+  tasks                     Task[]
+  visitsList                Visit[]
+
+  @@index([status, category])
+  @@index([city, neighborhood])
+  @@index([type, category])
+  @@index([price])
+  @@index([propertyOwnerId])
+  @@map("properties")
+}
+
+model PropertyPriceHistory {
+  id            String   @id @default(cuid())
+  propertyId    String
+  oldPrice      Float
+  newPrice      Float
+  priceType     String   @default("SALE")
+  changeType    String   @default("REDUCTION")
+  changeAmount  Float
+  changePercent Float
+  changedById   String?
+  notes         String?
+  createdAt     DateTime @default(now())
+  changedBy     User?    @relation("PriceChangedBy", fields: [changedById], references: [id])
+  property      Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId])
+  @@index([changeType])
+  @@map("property_price_history")
+}
+
+model NewsletterSubscriber {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  isActive  Boolean  @default(true)
+  source    String? // footer | blog
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("newsletter_subscribers")
+}
+
+model PropertyViewLog {
+  id         String   @id @default(cuid())
+  propertyId String
+  source     String   @default("site")
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId, createdAt])
+  @@index([createdAt])
+  @@index([source, createdAt])
+  @@map("property_view_logs")
+}
+
+model OwnerContactLog {
+  id          String         @id @default(cuid())
+  propertyId  String
+  ownerId     String?
+  userId      String
+  contactType String
+  phoneNumber String?
+  createdAt   DateTime       @default(now())
+  owner       PropertyOwner? @relation(fields: [ownerId], references: [id])
+  property    Property       @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  user        User           @relation("OwnerContactLogs", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId, createdAt])
+  @@index([userId, createdAt])
+  @@index([ownerId, createdAt])
+  @@map("owner_contact_logs")
+}
+
+model PropertyEvaluation {
+  id         String   @id @default(cuid())
+  value      Float
+  notes      String?
+  evaluator  String
+  date       DateTime @default(now())
+  propertyId String
+  createdAt  DateTime @default(now())
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@map("property_evaluations")
+}
+
+model PropertyOwner {
+  id                      String                    @id @default(cuid())
+  name                    String
+  email                   String?
+  phones                  String[]
+  birthDate               DateTime?
+  profile                 OwnerProfile              @default(PROPRIETARIO)
+  cpf                     String?
+  rg                      String?
+  maritalStatus           String?
+  residentialAddress      String?
+  residentialNumber       String?
+  residentialComplement   String?
+  residentialNeighborhood String?
+  residentialCity         String?
+  residentialState        String?
+  residentialZipCode      String?
+  notes                   String?
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime                  @updatedAt
+  phoneContacts           Json?
+  emails                  String[]
+  ownerContactLogs        OwnerContactLog[]
+  properties              Property[]
+  attachments             PropertyOwnerAttachment[]
+
+  @@map("property_owners")
+}
+
+model PropertyOwnerAttachment {
+  id        String        @id @default(cuid())
+  name      String
+  type      String
+  url       String
+  ownerId   String
+  createdAt DateTime      @default(now())
+  owner     PropertyOwner @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@map("property_owner_attachments")
+}
+
+model PropertyOwnerHistory {
+  id         String    @id @default(cuid())
+  type       String
+  name       String
+  cpf        String?
+  email      String?
+  phone      String?
+  startDate  DateTime?
+  endDate    DateTime?
+  notes      String?
+  propertyId String
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  property   Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@map("property_owner_history")
+}
+
+model PropertyDocument {
+  id              String   @id @default(cuid())
+  matriculaNumber String?
+  matriculaUrl    String?
+  iptuNumber      String?
+  iptuUrl         String?
+  certidaoSPU     String?
+  certidaoSPUUrl  String?
+  otherDocuments  Json?
+  propertyId      String   @unique
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  property        Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@map("property_documents")
+}
+
+model PropertyVisitRecord {
+  id          String   @id @default(cuid())
+  visitDate   DateTime
+  clientName  String
+  clientPhone String?
+  clientEmail String?
+  brokerId    String?
+  brokerName  String
+  feedback    String?
+  brokerNotes String?
+  rating      Int?
+  status      String   @default("REALIZADA")
+  propertyId  String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@map("property_visit_records")
+}
+
+model PropertyProposal {
+  id                        String    @id @default(cuid())
+  clientName                String
+  clientEmail               String?
+  clientCpf                 String?
+  leadId                    String?
+  proposedValue             Float
+  hasDirectPayment          Boolean   @default(false)
+  directPaymentOwn          Float?
+  directPaymentInstallments Int?
+  hasCorrection             Boolean   @default(false)
+  correctionDetails         String?
+  hasPermuta                Boolean   @default(false)
+  permutaValue              Float?
+  permutaType               String?
+  permutaCity               String?
+  permutaNeighborhood       String?
+  permutaAddress            String?
+  permutaBedrooms           Int?
+  permutaArea               Float?
+  permutaDetails            String?
+  hasBankFinancing          Boolean   @default(false)
+  bankFinancingOwn          Float?
+  bankFinancingValue        Float?
+  financingBank             String?
+  commissionType            String?
+  commissionPercent         Float?
+  commissionValue           Float?
+  netValueToSeller          Float?
+  hasPartnerBroker          Boolean   @default(false)
+  partnerBrokerName         String?
+  partnerBrokerCreci        String?
+  scopeSummary              String?
+  status                    String    @default("PENDENTE")
+  notes                     String?
+  counterProposal           Float?
+  counterOfferDetails       String?
+  propertyId                String
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @updatedAt
+  discountPercent           Float?
+  originalValue             Float?
+  purpose                   String?
+  rentalGuarantee           String?
+  rentalStartDate           DateTime?
+  corretorId                String?
+  corretor                  User?     @relation("ProposalCorretor", fields: [corretorId], references: [id])
+  property                  Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([corretorId])
+  @@map("property_proposals")
+}
+
+model PropertyChangelog {
+  id         String    @id @default(cuid())
+  field      String
+  oldValue   String?
+  newValue   String?
+  userId     String?
+  userName   String
+  notified   Boolean   @default(false)
+  notifiedAt DateTime?
+  propertyId String
+  createdAt  DateTime  @default(now())
+  property   Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId, createdAt])
+  @@map("property_changelog")
+}
+
+model PropertyActivityLog {
+  id            String    @id @default(cuid())
+  action        String
+  description   String?
+  propertyId    String?
+  propertyCode  String
+  propertyTitle String?
+  userId        String?
+  userName      String
+  userRole      String?
+  metadata      Json?
+  ipAddress     String?
+  createdAt     DateTime  @default(now())
+  property      Property? @relation(fields: [propertyId], references: [id])
+  user          User?     @relation("PropertyActivityLogs", fields: [userId], references: [id])
+
+  @@index([createdAt])
+  @@index([propertyId])
+  @@index([userId])
+  @@index([action])
+  @@map("property_activity_logs")
+}
+
+model PropertyObservation {
+  id         String   @id @default(cuid())
+  content    String
+  isPinned   Boolean  @default(false)
+  userId     String
+  propertyId String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId, createdAt])
+  @@index([propertyId, isPinned])
+  @@map("property_observations")
+}
+
+model PropertyTimeline {
+  id              String    @id @default(cuid())
+  step            String
+  title           String
+  description     String?
+  status          String    @default("PENDENTE")
+  order           Int       @default(0)
+  completedAt     DateTime?
+  completedBy     String?
+  completedById   String?
+  notes           String?
+  assignedToId    String?
+  assignedToName  String?
+  propertyId      String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  assignedTo      User?     @relation("TimelineAssignedTo", fields: [assignedToId], references: [id])
+  completedByUser User?     @relation("TimelineCompletedBy", fields: [completedById], references: [id])
+  property        Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId, order])
+  @@map("property_timeline")
+}
+
+model PropertyExclusivity {
+  id                   String    @id @default(cuid())
+  checklist            Json?
+  startDate            DateTime?
+  endDate              DateTime?
+  alertSent            Boolean   @default(false)
+  captadorId           String?
+  captadorName         String?
+  gestorId             String?
+  gestorName           String?
+  comissaoVenda        Float?
+  comissaoLocacao      Float?
+  comissaoRepasse      Float?
+  condicoesEspeciais   String?
+  feedbackStatus       String?   @default("EM_DIA")
+  contratoGerado       Boolean   @default(false)
+  contratoUrl          String?
+  contratoAssinado     Boolean   @default(false)
+  dataAssinatura       DateTime?
+  ultimoRelatorio      DateTime?
+  frequenciaRelatorio  String?   @default("SEMANAL")
+  // Mídias de exposição (exibidas no relatório do proprietário)
+  midiaFotosProf       Boolean   @default(false)
+  midiaVideoProf       Boolean   @default(false)
+  midiaNowHouse        Boolean   @default(false)
+  midiaNowHouseDate    DateTime?
+  midiaOpenHouse       Boolean   @default(false)
+  midiaOpenHouseDate   DateTime?
+  midiaMetaAds         Boolean   @default(false)
+  midiaGoogleAds       Boolean   @default(false)
+  lastFeedbackDate     DateTime?
+  feedbackIntervalDays Int?      @default(7)
+  notes                String?
+  status               String    @default("ATIVA")
+  propertyId           String    @unique
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  property             Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@map("property_exclusivity")
+}
+
+model Lead {
+  id                     String           @id @default(cuid())
+  name                   String
+  email                  String?
+  phone                  String?
+  message                String?
+  status                 LeadStatus       @default(NOVO)
+  source                 LeadSource       @default(SITE)
+  ticket                 LeadTicket       @default(COMPRA)
+  temperature            LeadTemperature  @default(MORNO)
+  profile                LeadProfile      @default(COMPRADOR)
+  hasPermuta             Boolean          @default(false)
+  permutaValue           Float?
+  permutaLocation        String?
+  permutaDescription     String?
+  condominiumsOfInterest String[]
+  score                  Int              @default(0)
+  probability            Int              @default(0)
+  aiAnalysis             Json?
+  budget                 Float?
+  minBudget              Float?
+  maxBudget              Float?
+  hasFinancing           Boolean          @default(false)
+  financingApproved      Boolean          @default(false)
+  approvedAmount         Float?
+  preferredPayment       String?
+  bantBudget             Int              @default(0)
+  bantAuthority          Int              @default(0)
+  bantNeed               Int              @default(0)
+  bantTimeline           Int              @default(0)
+  qualificationAnswers   Json?
+  qualificationScore     Int              @default(0)
+  tags                   String[]
+  checklistItems         Json?
+  lastContact            DateTime?
+  nextFollowUp           DateTime?
+  archivedAt             DateTime?
+  archivedReason         String?
+  archivedCategory       String?
+  archivedById           String?
+  previousStatus         String?
+  isBanned               Boolean          @default(false)
+  bannedAt               DateTime?
+  bannedReason           String?
+  bannedById             String?
+  doNotContact           Boolean          @default(false)
+  doNotEmail             Boolean          @default(false)
+  isAlsoSeller           Boolean          @default(false)
+  linkedOwnerId          String?
+  statusChangedAt        DateTime?
+  googleCalendarEventIds String[]
+  cpf                    String?
+  rg                     String?
+  birthDate              DateTime?
+  maritalStatus          String?
+  profession             String?
+  address                String?
+  number                 String?
+  complement             String?
+  neighborhood           String?
+  city                   String?
+  state                  String?
+  zipCode                String?
+  createdAt              DateTime         @default(now())
+  updatedAt              DateTime         @updatedAt
+  propertyId             String?
+  corretorId             String?
+  directInstallment      Boolean          @default(false)
+  permutaPropertyCode    String?
+  rentalGuarantees       String[]
+  searchBedrooms         String?
+  searchFurnished        Boolean?
+  searchSubtype          String?
+  searchTypologies       String[]
+  permutaArea            Float?
+  permutaBedrooms        Int?
+  permutaCity            String?
+  permutaNeighborhood    String?
+  permutaType            String?
+  nickname               String?
+  searchSubtypes         String[]
+  createdById            String?
+  visitStage             String?
+  contact2Name           String?
+  contact2Phone          String?
+  contact2Role           String?
+  // Origem de campanha — preenchido automaticamente na captura do lead a
+  // partir dos parâmetros da URL de entrada (ver src/lib/utm.ts).
+  utmSource              String?
+  utmMedium              String?
+  utmCampaign            String?
+  utmTerm                String?
+  utmContent             String?
+  gclid                  String?
+  fbclid                 String?
+  landingPage            String?
+  referrer               String?
+  contracts              Contract[]
+  activities             LeadActivity[]
+  notes                  LeadNote[]
+  linkedProperties       LeadProperty[]
+  schedules              LeadSchedule[]
+  corretor               User?            @relation("LeadCorretor", fields: [corretorId], references: [id])
+  createdBy              User?            @relation("LeadCreatedBy", fields: [createdById], references: [id])
+  property               Property?        @relation(fields: [propertyId], references: [id])
+  scheduledVisits        ScheduledVisit[]
+  tasks                  Task[]
+
+  @@index([status])
+  @@index([corretorId])
+  @@index([score])
+  @@map("leads")
+}
+
+model Favorite {
+  id         String   @id @default(cuid())
+  createdAt  DateTime @default(now())
+  userId     String
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, propertyId])
+  @@map("favorites")
+}
+
+model Visit {
+  id           String   @id @default(cuid())
+  date         DateTime
+  time         String?
+  notes        String?
+  confirmed    Boolean  @default(false)
+  cancelled    Boolean  @default(false)
+  visitorName  String?
+  visitorEmail String?
+  visitorPhone String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  userId       String?
+  propertyId   String
+  property     Property @relation(fields: [propertyId], references: [id])
+  user         User?    @relation(fields: [userId], references: [id])
+
+  @@map("visits")
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  icon        String   @default("home")
+  color       String   @default("orange")
+  isActive    Boolean  @default(true)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("categories")
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  title     String
+  message   String
+  read      Boolean  @default(false)
+  type      String
+  link      String?
+  createdAt DateTime @default(now())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model LeadNote {
+  id        String   @id @default(cuid())
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  leadId    String
+  authorId  String?
+  pinned    Boolean  @default(false)
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@map("lead_notes")
+}
+
+model LeadActivity {
+  id          String   @id @default(cuid())
+  type        String
+  description String
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  leadId      String
+  userId      String?
+  lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  user        User?    @relation("LeadActivityUser", fields: [userId], references: [id])
+
+  @@index([leadId])
+  @@index([type])
+  @@index([userId])
+  @@map("lead_activities")
+}
+
+model LeadSchedule {
+  id        String       @id @default(cuid())
+  type      ScheduleType
+  date      DateTime
+  time      String
+  notes     String?
+  completed Boolean      @default(false)
+  cancelled Boolean      @default(false)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  leadId    String
+  lead      Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@map("lead_schedules")
+}
+
+model Contract {
+  id                 String           @id @default(cuid())
+  codigo             String           @unique
+  type               ContractType
+  category           ContractCategory @default(VENDA)
+  name               String
+  status             ContractStatus   @default(RASCUNHO)
+  documentUrl        String?
+  valor              Float            @default(0)
+  valorEntrada       Float?
+  valorFinanciamento Float?
+  comissao           Float?
+  formaPagamento     String?
+  compradorNome      String?
+  compradorDoc       String?
+  compradorEmail     String?
+  vendedorNome       String?
+  vendedorDoc        String?
+  vendedorEmail      String?
+  locatarioNome      String?
+  locatarioDoc       String?
+  locadorNome        String?
+  locadorDoc         String?
+  valorAluguel       Float?
+  valorCaucao        Float?
+  duracaoMeses       Int?
+  parte1Nome         String?
+  parte1Doc          String?
+  parte2Nome         String?
+  parte2Doc          String?
+  valorDiferenca     Float?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  signedAt           DateTime?
+  leadId             String?
+  propertyId         String?
+  corretorId         String?
+  corretor           User?            @relation("ContractCorretor", fields: [corretorId], references: [id])
+  lead               Lead?            @relation(fields: [leadId], references: [id])
+  property           Property?        @relation("ContractProperty", fields: [propertyId], references: [id])
+
+  @@index([type])
+  @@index([status])
+  @@index([category])
+  @@map("contracts")
+}
+
+model LeadProperty {
+  id             String           @id @default(cuid())
+  type           LeadPropertyType
+  sentAt         DateTime?
+  visitedAt      DateTime?
+  proposalAt     DateTime?
+  proposalValue  Float?
+  proposalStatus String?
+  feedback       String?
+  rating         Int?
+  interested     Boolean?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  leadId         String
+  propertyId     String
+  sentById       String?
+  lead           Lead             @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  property       Property         @relation("LeadProperties", fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@unique([leadId, propertyId, type])
+  @@index([leadId])
+  @@index([propertyId])
+  @@map("lead_properties")
+}
+
+model Comissao {
+  id            String         @id @default(cuid())
+  valorVenda    Float
+  percentual    Float
+  valorComissao Float
+  status        ComissaoStatus @default(PENDENTE)
+  imovelCodigo  String
+  imovelTitulo  String
+  dataPagamento DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  corretorId    String
+  corretor      User           @relation(fields: [corretorId], references: [id])
+
+  @@index([corretorId])
+  @@index([status])
+  @@map("comissoes")
+}
+
+model Meta {
+  id                String     @id @default(cuid())
+  periodo           String
+  metaVendas        Int        @default(0)   // meta captações (contagem)
+  metaValor         Float      @default(0)   // meta VGV
+  metaLeads         Int        @default(0)
+  metaComissao      Float      @default(0)   // meta comissão líquida definida
+  vendasRealizadas  Int        @default(0)   // captações realizadas
+  valorRealizado    Float      @default(0)   // VGV executado
+  comissaoRealizada Float      @default(0)   // comissão líquida executada
+  leadsConvertidos  Int        @default(0)
+  bonus             Float      @default(0)
+  status            MetaStatus @default(EM_ANDAMENTO)
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  corretorId       String
+  corretor         User       @relation(fields: [corretorId], references: [id])
+
+  @@unique([corretorId, periodo])
+  @@map("metas")
+}
+
+model KanbanColumn {
+  id                String     @id @default(cuid())
+  title             String
+  status            LeadStatus
+  color             String     @default("#3B82F6")
+  icon              String     @default("inbox")
+  order             Int        @default(0)
+  automationEnabled Boolean    @default(false)
+  automationRules   Json?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+  funnelStage       String?
+  scope             String     @default("ADMIN")
+
+  @@map("kanban_columns")
+}
+
+model SystemConfig {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("system_configs")
+}
+
+model Post {
+  id             String          @id @default(cuid())
+  title          String
+  slug           String          @unique
+  excerpt        String?
+  content        String
+  coverImage     String?
+  status         PostStatus      @default(RASCUNHO)
+  featured       Boolean         @default(false)
+  views          Int             @default(0)
+  publishedAt    DateTime?
+  scheduledAt    DateTime?
+  authorId       String
+  categoryId     String?
+  seoTitle       String?
+  seoDescription String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  PostToPostTag  PostToPostTag[]
+  author         User            @relation(fields: [authorId], references: [id])
+  category       PostCategory?   @relation(fields: [categoryId], references: [id])
+
+  @@map("posts")
+}
+
+model PostCategory {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  color       String   @default("#0A1E3D")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  posts       Post[]
+
+  @@map("post_categories")
+}
+
+model PostTag {
+  id            String          @id @default(cuid())
+  name          String
+  slug          String          @unique
+  createdAt     DateTime        @default(now())
+  PostToPostTag PostToPostTag[]
+
+  @@map("post_tags")
+}
+
+model HeroSlide {
+  id               String   @id @default(cuid())
+  title            String
+  paragraph        String?
+  badge            String?
+  alignment        String   @default("left")
+  titleSize        String   @default("text-4xl md:text-6xl")
+  titleFont        String   @default("font-bold")
+  titleColor       String   @default("#FFFFFF")
+  paragraphSize    String   @default("text-lg md:text-xl")
+  paragraphFont    String   @default("font-normal")
+  paragraphColor   String   @default("#FFFFFF")
+  button1Text      String?
+  button1Link      String?
+  button1Color     String   @default("#0A1E3D")
+  button1Hover     String   @default("#1A3560")
+  button1TextColor String   @default("#FFFFFF")
+  button1Rounded   String   @default("rounded-xl")
+  button2Text      String?
+  button2Link      String?
+  button2Color     String   @default("transparent")
+  button2Hover     String   @default("rgba(255,255,255,0.1)")
+  button2TextColor String   @default("#FFFFFF")
+  button2Rounded   String   @default("rounded-xl")
+  button2Border    String   @default("border border-white")
+  bgImage          String?
+  bgVideo          String?
+  bgOverlay        String   @default("bg-black/40")
+  order            Int      @default(0)
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("hero_slides")
+}
+
+model PropertyTypeCard {
+  id        String   @id @default(cuid())
+  type      String   @unique
+  title     String
+  subtitle  String?
+  image     String?
+  icon      String?
+  bgColor   String   @default("#0A1E3D")
+  textColor String   @default("#FFFFFF")
+  order     Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("property_type_cards")
+}
+
+model PopupBanner {
+  id             String    @id @default(cuid())
+  title          String    @default("Não perca essa oportunidade!")
+  description    String?
+  imageUrl       String?
+  buttonText     String    @default("Saiba mais")
+  buttonLink     String?
+  clicksToShow   Int       @default(0)
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  bgColor        String?   @default("#0B2545")
+  endDate        DateTime?
+  excludePages   String[]
+  formButtonText String?   @default("Enviar")
+  formFields     String[]
+  imageUrlMobile String?
+  order          Int       @default(0)
+  overlayOpacity Float?    @default(0.5)
+  popupType      String    @default("BANNER")
+  position       String    @default("CENTER")
+  showFrequency  String    @default("ONCE_PER_SESSION")
+  size           String    @default("MEDIUM")
+  startDate      DateTime?
+  targetPages    String[]
+  textColor      String?   @default("#FFFFFF")
+  triggerType    String    @default("PAGE_LOAD")
+  triggerValue   Int       @default(0)
+
+  @@map("popup_banners")
+}
+
+model WatermarkSettings {
+  id        String   @id @default(cuid())
+  logoUrl   String?
+  position  String   @default("bottom-right")
+  opacity   Int      @default(50)
+  scale     Int      @default(20)
+  margin    Int      @default(20)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("watermark_settings")
+}
+
+model MaintenanceMode {
+  id           String    @id @default(cuid())
+  isActive     Boolean   @default(false)
+  message      String?
+  scheduledEnd DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@map("maintenance_mode")
+}
+
+model MindMap {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  data        Json
+  thumbnail   String?
+  isPublic    Boolean  @default(false)
+  shareToken  String?  @unique
+  userId      String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User?    @relation(fields: [userId], references: [id])
+
+  @@map("mind_maps")
+}
+
+model MindMapNode {
+  id        String   @id @default(cuid())
+  mapId     String
+  text      String
+  color     String   @default("#3B82F6")
+  x         Float    @default(0)
+  y         Float    @default(0)
+  parentId  String?
+  collapsed Boolean  @default(false)
+  notes     String?
+  link      String?
+  icon      String?
+  checklist Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("mind_map_nodes")
+}
+
+model Task {
+  id              String       @id @default(cuid())
+  title           String
+  description     String?
+  type            TaskType     @default(OUTRO)
+  priority        TaskPriority @default(MEDIA)
+  status          TaskStatus   @default(PENDENTE)
+  dueDate         DateTime
+  dueTime         String?
+  reminderDate    DateTime?
+  reminderSent    Boolean      @default(false)
+  propertyId      String?
+  leadId          String?
+  createdById     String
+  assignedToId    String
+  completedAt     DateTime?
+  completedById   String?
+  completionNotes String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  assignedTo      User         @relation("TaskAssignedTo", fields: [assignedToId], references: [id])
+  createdBy       User         @relation("TaskCreatedBy", fields: [createdById], references: [id])
+  lead            Lead?        @relation(fields: [leadId], references: [id])
+  property        Property?    @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId])
+  @@index([assignedToId])
+  @@index([dueDate])
+  @@index([status])
+  @@map("tasks")
+}
+
+model Partner {
+  id                String             @id @default(cuid())
+  name              String
+  slug              String             @unique
+  logo              String?
+  email             String?
+  phone             String?
+  cnpj              String?
+  address           String?
+  city              String?
+  state             String?
+  zipCode           String?
+  primaryColor      String             @default("#F97316")
+  secondaryColor    String             @default("#1F2937")
+  isActive          Boolean            @default(true)
+  maxProperties     Int                @default(100)
+  maxLeads          Int                @default(500)
+  maxUsers          Int                @default(5)
+  currentProperties Int                @default(0)
+  currentLeadsMonth Int                @default(0)
+  currentUsers      Int                @default(0)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  expiresAt         DateTime?
+  analytics         PartnerAnalytics[]
+  apiKeys           PartnerApiKey[]
+  domains           PartnerDomain[]
+  permissions       PartnerPermission?
+
+  @@map("partners")
+}
+
+model PartnerDomain {
+  id            String    @id @default(cuid())
+  domain        String    @unique
+  isSubdomain   Boolean   @default(true)
+  sslStatus     String    @default("PENDING")
+  sslExpiresAt  DateTime?
+  dnsConfigured Boolean   @default(false)
+  dnsVerifiedAt DateTime?
+  isActive      Boolean   @default(true)
+  isPrimary     Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  partnerId     String
+  partner       Partner   @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+
+  @@index([domain])
+  @@map("partner_domains")
+}
+
+model PartnerPermission {
+  id                   String   @id @default(cuid())
+  canAccessProperties  Boolean  @default(true)
+  canAccessLeads       Boolean  @default(true)
+  canAccessPortals     Boolean  @default(false)
+  canAccessWhatsApp    Boolean  @default(false)
+  canAccessEmail       Boolean  @default(false)
+  canAccessReports     Boolean  @default(true)
+  rateLimit            Int      @default(1000)
+  dailyLimit           Int      @default(10000)
+  hasCustomBranding    Boolean  @default(true)
+  hasCustomDomain      Boolean  @default(false)
+  hasAdvancedAnalytics Boolean  @default(false)
+  hasApiWebhooks       Boolean  @default(false)
+  portalZapImoveis     Boolean  @default(false)
+  portalVivaReal       Boolean  @default(false)
+  portalOlx            Boolean  @default(false)
+  portalImovelWeb      Boolean  @default(false)
+  portalChavesNaMao    Boolean  @default(false)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  partnerId            String   @unique
+  partner              Partner  @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+
+  @@map("partner_permissions")
+}
+
+model PartnerApiKey {
+  id         String    @id @default(cuid())
+  name       String
+  key        String    @unique
+  keyPrefix  String
+  scopes     String[]
+  isActive   Boolean   @default(true)
+  lastUsedAt DateTime?
+  usageCount Int       @default(0)
+  expiresAt  DateTime?
+  createdAt  DateTime  @default(now())
+  partnerId  String
+  partner    Partner   @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+
+  @@index([key])
+  @@map("partner_api_keys")
+}
+
+model PartnerAnalytics {
+  id                 String   @id @default(cuid())
+  date               DateTime @db.Date
+  pageViews          Int      @default(0)
+  uniqueVisitors     Int      @default(0)
+  sessions           Int      @default(0)
+  avgSessionDuration Int      @default(0)
+  bounceRate         Float    @default(0)
+  propertyViews      Int      @default(0)
+  propertyClicks     Int      @default(0)
+  propertyShares     Int      @default(0)
+  favoritesAdded     Int      @default(0)
+  leadsGenerated     Int      @default(0)
+  whatsappClicks     Int      @default(0)
+  phoneClicks        Int      @default(0)
+  emailClicks        Int      @default(0)
+  scheduledVisits    Int      @default(0)
+  apiRequests        Int      @default(0)
+  apiErrors          Int      @default(0)
+  topPages           Json?
+  topProperties      Json?
+  trafficSources     Json?
+  partnerId          String
+  partner            Partner  @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+
+  @@unique([partnerId, date])
+  @@index([date])
+  @@map("partner_analytics")
+}
+
+model TaskBoard {
+  id          String       @id @default(cuid())
+  name        String       @default("Meu Quadro")
+  description String?
+  color       String       @default("#7c3aed")
+  icon        String?
+  isDefault   Boolean      @default(false)
+  isArchived  Boolean      @default(false)
+  createdById String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  columns     TaskColumn[]
+
+  @@map("task_boards")
+}
+
+model TaskColumn {
+  id         String     @id @default(cuid())
+  name       String     @default("Nova Coluna")
+  color      String     @default("#6b7280")
+  position   Int        @default(0)
+  isArchived Boolean    @default(false)
+  boardId    String
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  cards      TaskCard[]
+  board      TaskBoard  @relation(fields: [boardId], references: [id], onDelete: Cascade)
+
+  @@index([boardId, position])
+  @@map("task_columns")
+}
+
+model TaskCard {
+  id             String              @id @default(cuid())
+  title          String              @default("Nova Tarefa")
+  description    String?
+  position       Int                 @default(0)
+  startDate      DateTime?
+  dueDate        DateTime?
+  completedAt    DateTime?
+  priority       String?             @default("MEDIUM")
+  status         String?             @default("AGUARDANDO")
+  labels         String[]
+  color          String?
+  progress       Int                 @default(0)
+  estimatedHours Float?
+  actualHours    Float?
+  attachments    Json?
+  assigneeIds    String[]
+  isArchived     Boolean             @default(false)
+  columnId       String
+  createdById    String?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  checklists     TaskCardChecklist[]
+  comments       TaskCardComment[]
+  column         TaskColumn          @relation(fields: [columnId], references: [id], onDelete: Cascade)
+
+  @@index([columnId, position])
+  @@map("task_cards")
+}
+
+model TaskCardChecklist {
+  id        String                  @id @default(cuid())
+  title     String                  @default("Checklist")
+  position  Int                     @default(0)
+  cardId    String
+  createdAt DateTime                @default(now())
+  updatedAt DateTime                @updatedAt
+  items     TaskCardChecklistItem[]
+  card      TaskCard                @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  @@map("task_card_checklists")
+}
+
+model TaskCardChecklistItem {
+  id          String            @id @default(cuid())
+  text        String
+  isCompleted Boolean           @default(false)
+  position    Int               @default(0)
+  checklistId String
+  createdAt   DateTime          @default(now())
+  checklist   TaskCardChecklist @relation(fields: [checklistId], references: [id], onDelete: Cascade)
+
+  @@map("task_card_checklist_items")
+}
+
+model TaskCardComment {
+  id         String   @id @default(cuid())
+  content    String
+  cardId     String
+  authorId   String?
+  authorName String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  card       TaskCard @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  @@map("task_card_comments")
+}
+
+model PhotoSession {
+  id                    String                @id @default(cuid())
+  propertyId            String
+  serviceTypes          String[]              @default(["FOTO"])
+  scheduledDate         DateTime
+  scheduledTime         String
+  estimatedDuration     Int                   @default(60)
+  status                String                @default("AGENDADO")
+  photographerIds       String[]              @default([])
+  photographerId        String?
+  brokerId              String?
+  brokerConfirmed       Boolean               @default(false)
+  brokerConfirmedAt     DateTime?
+  ownerConfirmed        Boolean               @default(false)
+  ownerConfirmedAt      DateTime?
+  contactName           String?
+  contactPhone          String?
+  isOccupied            Boolean               @default(false)
+  requiresAdminApproval Boolean               @default(false)
+  adminApproved         Boolean               @default(false)
+  adminApprovedById     String?
+  adminApprovedAt       DateTime?
+  notes                 String?
+  internalNotes         String?
+  address               String?
+  accessInstructions    String?
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  history               PhotoSessionHistory[]
+  media                 PhotoSessionMedia[]
+  broker                User?                 @relation("BrokerSessions", fields: [brokerId], references: [id])
+  photographer          User?                 @relation("PhotographerSessions", fields: [photographerId], references: [id])
+  property              Property              @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId])
+  @@index([photographerId])
+  @@index([brokerId])
+  @@index([scheduledDate])
+  @@index([status])
+  @@map("photo_sessions")
+}
+
+model PhotoSessionSlot {
+  id             String   @id @default(cuid())
+  photographerId String
+  date           DateTime @db.Date
+  startTime      String
+  endTime        String
+  slotType       String   @default("DISPONIVEL")
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  photographer   User     @relation("PhotographerSlots", fields: [photographerId], references: [id])
+
+  @@index([photographerId, date])
+  @@map("photo_session_slots")
+}
+
+model PhotoSessionMedia {
+  id           String       @id @default(cuid())
+  sessionId    String
+  mediaType    String
+  fileName     String
+  fileUrl      String
+  fileSize     Int?
+  mimeType     String?
+  thumbnailUrl String?
+  width        Int?
+  height       Int?
+  duration     Int?
+  status       String       @default("BRUTO")
+  uploadedById String?
+  approvedById String?
+  approvedAt   DateTime?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  session      PhotoSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  uploadedBy   User?        @relation(fields: [uploadedById], references: [id])
+
+  @@index([sessionId])
+  @@map("photo_session_media")
+}
+
+model PhotoSessionHistory {
+  id          String       @id @default(cuid())
+  sessionId   String
+  action      String
+  description String
+  userId      String?
+  userName    String?
+  metadata    Json?
+  createdAt   DateTime     @default(now())
+  session     PhotoSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@map("photo_session_history")
+}
+
+model BusinessPartner {
+  id                      String                    @id @default(cuid())
+  type                    BusinessPartnerType       @default(CORRETOR)
+  name                    String
+  email                   String?
+  phone                   String?
+  cpf                     String?                   @unique
+  rg                      String?
+  creci                   String?
+  creciStatus             CreciStatus               @default(ATIVO)
+  gender                  String?
+  birthDate               DateTime?
+  isAutonomous            Boolean                   @default(true)
+  actingRegions           String[]
+  specialties             String[]
+  partnershipFormat       PartnershipFormat         @default(CAPTADOR)
+  attachments             Json?
+  address                 String?
+  neighborhood            String?
+  city                    String?
+  state                   String?
+  zipCode                 String?
+  avatar                  String?
+  partnershipTermStatus   PartnershipTermStatus     @default(SEM_CONTRATO)
+  partnershipTermUrl      String?
+  partnershipTermSignedAt DateTime?
+  tags                    String[]
+  pixKey                  String?
+  pixKeyType              String?
+  bankName                String?
+  bankCode                String?
+  bankAgency              String?
+  bankAccount             String?
+  bankAccountType         String?
+  birthdayReminder        Boolean                   @default(true)
+  totalVGV                Float                     @default(0)
+  totalVisits             Int                       @default(0)
+  totalProposals          Int                       @default(0)
+  totalContracts          Int                       @default(0)
+  lastEmailContact        DateTime?
+  lastWhatsappContact     DateTime?
+  lastVisit               DateTime?
+  lastProposal            DateTime?
+  isActive                Boolean                   @default(true)
+  agencyId                String?
+  funnelStageId           String?
+  stageEnteredAt          DateTime?
+  userId                  String?
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime                  @updatedAt
+  activities              BusinessPartnerActivity[]
+  contracts               BusinessPartnerContract[]
+  notes                   BusinessPartnerNote[]
+  proposals               BusinessPartnerProposal[]
+  visits                  BusinessPartnerVisit[]
+  agency                  RealEstateAgency?         @relation(fields: [agencyId], references: [id])
+  funnelStage             PartnerFunnelStage?       @relation("PartnerStage", fields: [funnelStageId], references: [id])
+  condominiums            Condominium[]             @relation("CondominiumBuilder")
+  stageMovements          PartnerStageMovement[]
+  scheduledVisits         ScheduledVisit[]          @relation("VisitPartner")
+
+  @@index([type])
+  @@index([agencyId])
+  @@index([creciStatus])
+  @@map("business_partners")
+}
+
+model RealEstateAgency {
+  id                  String                    @id @default(cuid())
+  companyName         String
+  tradeName           String?
+  cnpj                String?                   @unique
+  creciJuridico       String?
+  creciStatus         CreciStatus               @default(ATIVO)
+  phone               String?
+  email               String?
+  website             String?
+  address             String?
+  number              String?
+  complement          String?
+  neighborhood        String?
+  city                String?
+  state               String?
+  zipCode             String?
+  mainPartnerId       String?
+  isAdministrator     Boolean                   @default(false)
+  branches            Json?
+  logo                String?
+  tags                String[]
+  totalVGV            Float                     @default(0)
+  totalVisits         Int                       @default(0)
+  totalProposals      Int                       @default(0)
+  totalContracts      Int                       @default(0)
+  lastEmailContact    DateTime?
+  lastWhatsappContact DateTime?
+  lastVisit           DateTime?
+  isActive            Boolean                   @default(true)
+  createdAt           DateTime                  @default(now())
+  updatedAt           DateTime                  @updatedAt
+  contactName         String?
+  contactPhone        String?
+  activities          BusinessPartnerActivity[] @relation("AgencyActivities")
+  proposals           BusinessPartnerProposal[] @relation("AgencyProposals")
+  visits              BusinessPartnerVisit[]    @relation("AgencyVisits")
+  partners            BusinessPartner[]
+
+  @@index([creciStatus])
+  @@map("real_estate_agencies")
+}
+
+model BusinessPartnerVisit {
+  id          String            @id @default(cuid())
+  partnerId   String?
+  agencyId    String?
+  propertyId  String?
+  visitDate   DateTime
+  clientName  String?
+  clientPhone String?
+  feedback    String?
+  result      String?
+  createdAt   DateTime          @default(now())
+  agency      RealEstateAgency? @relation("AgencyVisits", fields: [agencyId], references: [id])
+  partner     BusinessPartner?  @relation(fields: [partnerId], references: [id])
+
+  @@index([partnerId])
+  @@index([agencyId])
+  @@map("business_partner_visits")
+}
+
+model BusinessPartnerProposal {
+  id            String            @id @default(cuid())
+  partnerId     String?
+  agencyId      String?
+  propertyId    String?
+  proposalDate  DateTime
+  proposalValue Float?
+  status        String            @default("EM_ANDAMENTO")
+  clientName    String?
+  notes         String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  agency        RealEstateAgency? @relation("AgencyProposals", fields: [agencyId], references: [id])
+  partner       BusinessPartner?  @relation(fields: [partnerId], references: [id])
+
+  @@index([partnerId])
+  @@index([agencyId])
+  @@map("business_partner_proposals")
+}
+
+model BusinessPartnerContract {
+  id                String          @id @default(cuid())
+  partnerId         String
+  propertyId        String?
+  contractDate      DateTime
+  saleValue         Float?
+  commissionValue   Float?
+  commissionPercent Float?
+  status            String          @default("EM_ANDAMENTO")
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  partner           BusinessPartner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+
+  @@index([partnerId])
+  @@map("business_partner_contracts")
+}
+
+model BusinessPartnerActivity {
+  id          String            @id @default(cuid())
+  partnerId   String?
+  agencyId    String?
+  type        String
+  description String
+  metadata    Json?
+  createdAt   DateTime          @default(now())
+  agency      RealEstateAgency? @relation("AgencyActivities", fields: [agencyId], references: [id])
+  partner     BusinessPartner?  @relation(fields: [partnerId], references: [id])
+
+  @@index([partnerId])
+  @@index([agencyId])
+  @@map("business_partner_activities")
+}
+
+model BusinessPartnerNote {
+  id            String          @id @default(cuid())
+  partnerId     String
+  content       String
+  createdById   String?
+  createdByName String?
+  createdAt     DateTime        @default(now())
+  partner       BusinessPartner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+
+  @@index([partnerId])
+  @@map("business_partner_notes")
+}
+
+model PartnerFunnel {
+  id           String                    @id @default(cuid())
+  name         String
+  description  String?
+  partnerTypes String[]
+  isDefault    Boolean                   @default(false)
+  isActive     Boolean                   @default(true)
+  createdAt    DateTime                  @default(now())
+  updatedAt    DateTime                  @updatedAt
+  automations  PartnerFunnelAutomation[]
+  stages       PartnerFunnelStage[]
+
+  @@map("partner_funnels")
+}
+
+model PartnerFunnelStage {
+  id                String                 @id @default(cuid())
+  funnelId          String
+  name              String
+  description       String?
+  color             String                 @default("#6b7280")
+  order             Int                    @default(0)
+  daysToStagnate    Int?
+  autoMoveAfterDays Int?
+  autoMoveToStageId String?
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+  partners          BusinessPartner[]      @relation("PartnerStage")
+  funnel            PartnerFunnel          @relation(fields: [funnelId], references: [id], onDelete: Cascade)
+  movements         PartnerStageMovement[]
+
+  @@index([funnelId])
+  @@map("partner_funnel_stages")
+}
+
+model PartnerStageMovement {
+  id          String             @id @default(cuid())
+  partnerId   String
+  fromStageId String?
+  toStageId   String
+  reason      String?
+  movedById   String?
+  isAutomatic Boolean            @default(false)
+  createdAt   DateTime           @default(now())
+  partner     BusinessPartner    @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  toStage     PartnerFunnelStage @relation(fields: [toStageId], references: [id], onDelete: Cascade)
+
+  @@index([partnerId])
+  @@index([toStageId])
+  @@map("partner_stage_movements")
+}
+
+model PartnerFunnelAutomation {
+  id             String        @id @default(cuid())
+  funnelId       String
+  name           String
+  description    String?
+  triggerType    String
+  triggerConfig  Json
+  actionType     String
+  actionConfig   Json
+  isActive       Boolean       @default(true)
+  executionCount Int           @default(0)
+  lastExecutedAt DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  funnel         PartnerFunnel @relation(fields: [funnelId], references: [id], onDelete: Cascade)
+
+  @@index([funnelId])
+  @@map("partner_funnel_automations")
+}
+
+model PartnerExclusiveAccess {
+  id                 String    @id @default(cuid())
+  propertyId         String    @unique
+  showToPartners     Boolean   @default(false)
+  commissionPercent  Float?
+  commissionNotes    String?
+  specialConditions  String?
+  allowPhotoDownload Boolean   @default(true)
+  allowVideoDownload Boolean   @default(true)
+  customMaterials    Json?
+  requireLogin       Boolean   @default(false)
+  allowedPartnerIds  String[]
+  validUntil         DateTime?
+  viewCount          Int       @default(0)
+  downloadCount      Int       @default(0)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@map("partner_exclusive_access")
+}
+
+model PartnerExclusiveView {
+  id          String   @id @default(cuid())
+  exclusiveId String
+  partnerId   String?
+  viewedAt    DateTime @default(now())
+  ipAddress   String?
+  userAgent   String?
+  downloads   Json?
+
+  @@index([exclusiveId])
+  @@index([partnerId])
+  @@map("partner_exclusive_views")
+}
+
+model IptuBase {
+  id                   String    @id @default(cuid())
+  inscricaoImobiliaria String?   @unique
+  contribuinte         String?   // Nome do Proprietário
+  compromissario       String?   // Nome do Compromissário
+  coproprietario       String?   // Nome do co-proprietário
+  cpfCnpj              String?
+  matricula            String?
+  condominio           String?
+  loteamento           String?   // Nome do Loteamento
+  quadra               String?   // Quadra do Loteamento
+  lote                 String?   // Lote do Loteamento
+  address              String    // Nome do Logradouro
+  number               String?
+  apto                 String?
+  andar                String?
+  complement           String?
+  neighborhood         String
+  enderecoEntrega      String?
+  numeroEntrega        String?
+  city                 String
+  state                String    @default("SP")
+  zipCode              String?
+  areaTerreno          Float?
+  areaConstruida       Float?
+  tipoImovel           String?
+  usoImovel            String?
+  anoConstricao        Int?
+  phones               String[]
+  emails               String[]
+  enrichedData         Json?
+  enrichedAt           DateTime?
+  propertyId           String?
+  matchStatus          String    @default("PENDENTE")
+  matchedAt            DateTime?
+  captacaoStatus       String    @default("DISPONIVEL")
+  captacaoNotes        String?
+  assignedToId         String?
+  contactAttempts      Int       @default(0)
+  lastContactAt        DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  @@index([neighborhood, city])
+  @@index([matchStatus])
+  @@index([captacaoStatus])
+  @@index([assignedToId])
+  @@map("iptu_base")
+}
+
+model CaptacaoRadar {
+  id                 String    @id @default(cuid())
+  titulo             String?
+  descricao          String?
+  origem             String
+  origemUrl          String?
+  origemNotes        String?
+  address            String?
+  number             String?
+  neighborhood       String?
+  city               String?
+  state              String?   @default("SP")
+  reference          String?
+  images             String[]
+  tipoImovel         String?
+  precoEstimado      Float?
+  areaEstimada       Float?
+  ownerName          String?
+  ownerPhone         String?
+  ownerEmail         String?
+  status             String    @default("PENDENTE")
+  priority           String    @default("NORMAL")
+  createdById        String
+  createdByName      String?
+  assignedToId       String?
+  assignedToName     String?
+  assignedAt         DateTime?
+  contactAttempts    Int       @default(0)
+  lastContactAt      DateTime?
+  contactHistory     Json?
+  capturedPropertyId String?
+  capturedAt         DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  condominio         String?
+  apartamento        String?
+  condoType          String?
+  condominiumId      String?
+  torre              String?
+
+  @@index([status])
+  @@index([priority])
+  @@index([createdById])
+  @@index([assignedToId])
+  @@index([condominiumId])
+  @@index([neighborhood, city])
+  @@map("captacao_radar")
+}
+
+model ScheduledVisit {
+  id                     String                   @id @default(cuid())
+  date                   DateTime
+  time                   String
+  endTime                String?
+  status                 ScheduledVisitStatus     @default(AGENDADA)
+  notes                  String?
+  internalNotes          String?
+  feedback               String?
+  rating                 Int?
+  leadId                 String?
+  visitorName            String?
+  visitorEmail           String?
+  visitorPhone           String?
+  corretorId             String?
+  createdById            String?
+  googleCalendarEventId  String?
+  confirmedAt            DateTime?
+  cancelledAt            DateTime?
+  completedAt            DateTime?
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+  partnerId              String?
+  isPartnerProperty      Boolean                  @default(false)
+  partnerPropertyAddress String?
+  partnerPropertyDesc    String?
+  cancelNotes            String?
+  cancelReason           String?
+  properties             ScheduledVisitProperty[]
+  corretor               User?                    @relation("VisitCorretor", fields: [corretorId], references: [id])
+  createdBy              User?                    @relation("VisitCreator", fields: [createdById], references: [id])
+  lead                   Lead?                    @relation(fields: [leadId], references: [id])
+  partner                BusinessPartner?         @relation("VisitPartner", fields: [partnerId], references: [id])
+
+  @@index([leadId])
+  @@index([corretorId])
+  @@index([partnerId])
+  @@index([date])
+  @@index([status])
+  @@map("scheduled_visits")
+}
+
+model ScheduledVisitProperty {
+  id         String         @id @default(cuid())
+  visitId    String
+  propertyId String
+  visitOrder Int            @default(0)
+  liked      Boolean?
+  feedback   String?
+  createdAt  DateTime       @default(now())
+  property   Property       @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  visit      ScheduledVisit @relation(fields: [visitId], references: [id], onDelete: Cascade)
+
+  @@unique([visitId, propertyId])
+  @@index([visitId])
+  @@index([propertyId])
+  @@map("scheduled_visit_properties")
+}
+
+model InstagramPost {
+  id               String    @id @default(cuid())
+  postId           String    @unique
+  shortCode        String?   @unique
+  type             String    @default("Image")
+  url              String
+  displayUrl       String
+  videoUrl         String?
+  caption          String?
+  hashtags         String[]
+  mentions         String[]
+  likesCount       Int       @default(0)
+  commentsCount    Int       @default(0)
+  videoViewCount   Int?
+  dimensionsWidth  Int?
+  dimensionsHeight Int?
+  timestamp        DateTime?
+  isActive         Boolean   @default(true)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([timestamp])
+  @@map("instagram_posts")
+}
+
+model StorageFile {
+  id             String                  @id @default(cuid())
+  name           String
+  key            String                  @unique
+  size           Int
+  mimeType       String
+  folderId       String?
+  description    String?
+  tags           String[]
+  thumbnailKey   String?
+  version        Int                     @default(1)
+  createdById    String?
+  isPublic       Boolean                 @default(false)
+  sharedWith     String[]
+  isDeleted      Boolean                 @default(false)
+  deletedAt      DateTime?
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+  shareExpiresAt DateTime?
+  sharePassword  String?
+  shareToken     String?                 @unique
+  permissions    StorageFilePermission[]
+  createdBy      User?                   @relation(fields: [createdById], references: [id])
+  folder         StorageFolder?          @relation(fields: [folderId], references: [id])
+
+  @@index([folderId])
+  @@index([createdById])
+  @@index([mimeType])
+  @@index([isDeleted])
+  @@index([shareToken])
+  @@map("storage_files")
+}
+
+model StorageFolder {
+  id             String                    @id @default(cuid())
+  name           String
+  color          String?
+  icon           String?
+  parentId       String?
+  createdById    String?
+  isPublic       Boolean                   @default(false)
+  sharedWith     String[]
+  isDeleted      Boolean                   @default(false)
+  deletedAt      DateTime?
+  createdAt      DateTime                  @default(now())
+  updatedAt      DateTime                  @updatedAt
+  ownerId        String?
+  ownerType      String?
+  shareExpiresAt DateTime?
+  sharePassword  String?
+  shareToken     String?                   @unique
+  files          StorageFile[]
+  permissions    StorageFolderPermission[]
+  createdBy      User?                     @relation(fields: [createdById], references: [id])
+  parent         StorageFolder?            @relation("FolderHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children       StorageFolder[]           @relation("FolderHierarchy")
+
+  @@index([parentId])
+  @@index([createdById])
+  @@index([ownerId])
+  @@index([isDeleted])
+  @@index([shareToken])
+  @@map("storage_folders")
+}
+
+model StorageFolderPermission {
+  id          String        @id @default(cuid())
+  folderId    String
+  userId      String
+  role        String        @default("VIEWER")
+  canUpload   Boolean       @default(false)
+  canDelete   Boolean       @default(false)
+  canShare    Boolean       @default(false)
+  canDownload Boolean       @default(true)
+  expiresAt   DateTime?
+  grantedById String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  folder      StorageFolder @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  grantedBy   User?         @relation("StorageFolderPermissionsGranted", fields: [grantedById], references: [id])
+  user        User          @relation("StorageFolderPermissions", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([folderId, userId])
+  @@index([userId])
+  @@index([folderId])
+  @@map("storage_folder_permissions")
+}
+
+model StorageFilePermission {
+  id          String      @id @default(cuid())
+  fileId      String
+  userId      String
+  role        String      @default("VIEWER")
+  canDelete   Boolean     @default(false)
+  canShare    Boolean     @default(false)
+  canDownload Boolean     @default(true)
+  expiresAt   DateTime?
+  grantedById String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  file        StorageFile @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  grantedBy   User?       @relation("StorageFilePermissionsGranted", fields: [grantedById], references: [id])
+  user        User        @relation("StorageFilePermissions", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([fileId, userId])
+  @@index([userId])
+  @@index([fileId])
+  @@map("storage_file_permissions")
+}
+
+model LeadImport {
+  id            String   @id @default(cuid())
+  fileName      String
+  totalRows     Int
+  importedCount Int
+  skippedCount  Int      @default(0)
+  errors        Json?
+  destination   String
+  sheetName     String?
+  columnMapping Json?
+  userId        String
+  corretorId    String?
+  createdAt     DateTime @default(now())
+  corretor      User?    @relation("LeadImportCorretor", fields: [corretorId], references: [id])
+  user          User     @relation("LeadImports", fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([corretorId])
+  @@index([createdAt])
+  @@map("lead_imports")
+}
+
+model StorageActivityLog {
+  id        String   @id @default(cuid())
+  action    String
+  fileId    String?
+  folderId  String?
+  userId    String?
+  userName  String?
+  details   Json?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  @@index([fileId])
+  @@index([folderId])
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("storage_activity_logs")
+}
+
+model EventRegistration {
+  id              String             @id @default(cuid())
+  eventSlug       String             @default("tappy-summit-2026")
+  name            String
+  phone           String
+  email           String
+  type            String
+  companyName     String?
+  acceptedTerms   Boolean            @default(false)
+  acceptedPrivacy Boolean            @default(false)
+  emailSent       Boolean            @default(false)
+  whatsappSent    Boolean            @default(false)
+  linkAccessed    Boolean            @default(false)
+  confirmed       Boolean            @default(false)
+  attended        Boolean            @default(false)
+  utmSource       String?
+  utmMedium       String?
+  utmCampaign     String?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  followUpLogs    EventFollowUpLog[]
+
+  @@unique([email, eventSlug])
+  @@index([eventSlug])
+  @@index([createdAt])
+  @@map("event_registrations")
+}
+
+model EventConfig {
+  id              String   @id @default(cuid())
+  eventSlug       String   @unique @default("tappy-summit-2026")
+  whatsappEnabled Boolean  @default(false)
+  whatsappMessage String   @default("Olá {nome}! 👋\n\nSua inscrição no *Tappy Summit Parceiros 2026* foi confirmada! 🎉\n\n📅 23 de Abril de 2026 (quinta)\n📍 Hotel Blue Tree Premium Sua Cidade\n🕐 Credenciamento às 14h\n\nNos vemos lá! 🚀")
+  whatsappSession String   @default("default")
+  whatsappDelay   Int      @default(5)
+  emailEnabled    Boolean  @default(true)
+  emailDelay      Int      @default(3)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("event_configs")
+}
+
+model EventFollowUp {
+  id                String             @id @default(cuid())
+  eventSlug         String             @default("tappy-summit-2026")
+  name              String
+  sortOrder         Int                @default(0)
+  whatsappEnabled   Boolean            @default(true)
+  whatsappMessage   String
+  emailEnabled      Boolean            @default(true)
+  emailSubject      String             @default("Tappy Summit 2026")
+  emailBody         String
+  active            Boolean            @default(true)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  delayHours        Int                @default(0)
+  delayType         String             @default("after_registration")
+  whatsappMediaType String?
+  whatsappMediaUrl  String?
+  logs              EventFollowUpLog[]
+
+  @@index([eventSlug])
+  @@index([sortOrder])
+  @@map("event_follow_ups")
+}
+
+model EventFollowUpLog {
+  id             String            @id @default(cuid())
+  followUpId     String
+  registrationId String
+  scheduledFor   DateTime
+  whatsappSent   Boolean           @default(false)
+  whatsappSentAt DateTime?
+  emailSent      Boolean           @default(false)
+  emailSentAt    DateTime?
+  error          String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  followUp       EventFollowUp     @relation(fields: [followUpId], references: [id], onDelete: Cascade)
+  registration   EventRegistration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+
+  @@unique([followUpId, registrationId])
+  @@index([scheduledFor])
+  @@index([whatsappSent])
+  @@index([emailSent])
+  @@map("event_follow_up_logs")
+}
+
+// Disparo (job) em massa — um registro por "click" em Disparar (WhatsApp ou Email)
+model EventBlast {
+  id              String                @id @default(cuid())
+  eventSlug       String                @default("tappy-summit-2026")
+  channel         String                @default("whatsapp") // whatsapp | email
+  sessionName     String?
+  subject         String?               // usado só para canal email
+  message         String                // whatsapp: texto; email: HTML
+  mediaUrl        String?
+  mediaType       String?
+  voiceUrl        String?
+  voiceFirst      Boolean               @default(false)
+  delayMs         Int                   @default(4000)
+  totalRecipients Int                   @default(0)
+  sentCount       Int                   @default(0)
+  errorCount      Int                   @default(0)
+  status          String                @default("running") // running | completed | aborted | failed
+  createdById     String?
+  createdByName   String?
+  startedAt       DateTime              @default(now())
+  finishedAt      DateTime?
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  recipients      EventBlastRecipient[]
+
+  @@index([eventSlug, createdAt])
+  @@index([channel, createdAt])
+  @@index([status])
+  @@map("event_blasts")
+}
+
+// Destinatário individual de um blast com status/timestamp/erro
+model EventBlastRecipient {
+  id             String     @id @default(cuid())
+  blastId        String
+  registrationId String?
+  name           String
+  phone          String     @default("")
+  email          String     @default("")
+  status         String     @default("pending") // pending | sent | failed
+  error          String?
+  sentAt         DateTime?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  blast          EventBlast @relation(fields: [blastId], references: [id], onDelete: Cascade)
+
+  @@index([blastId, status])
+  @@index([registrationId])
+  @@index([phone])
+  @@map("event_blast_recipients")
+}
+
+model EventPageView {
+  id          String   @id @default(cuid())
+  eventSlug   String   @default("tappy-summit-2026")
+  page        String
+  type        String
+  target      String?
+  referrer    String?
+  utmSource   String?
+  utmMedium   String?
+  utmCampaign String?
+  userAgent   String?
+  ip          String?
+  createdAt   DateTime @default(now())
+
+  @@index([eventSlug])
+  @@index([page])
+  @@index([type])
+  @@index([target])
+  @@index([createdAt])
+  @@map("event_page_views")
+}
+
+model PostToPostTag {
+  A         String
+  B         String
+  posts     Post    @relation(fields: [A], references: [id], onDelete: Cascade)
+  post_tags PostTag @relation(fields: [B], references: [id], onDelete: Cascade)
+
+  @@id([A, B], map: "_PostToPostTag_AB_pkey")
+  @@index([B], map: "_PostToPostTag_B_index")
+  @@map("_PostToPostTag")
+}
+
+enum Role {
+  ADMIN
+  CORRETOR
+  CLIENTE
+  FOTOGRAFO
+  SDR
+  PARCEIRO_EXTERNO
+  MARKETING
+  ASSINANTE // cliente assinante da plataforma — área própria ainda a definir
+}
+
+enum PropertyStatus {
+  DISPONIVEL
+  VENDIDO
+  ALUGADO
+  RESERVADO
+  SUSPENSO
+  INDISPONIVEL
+  INATIVO
+}
+
+enum FinalityStatus {
+  ATIVO
+  SUSPENSO
+  INATIVO
+  VENDIDO
+  ALUGADO
+}
+
+enum PropertyType {
+  APARTAMENTO
+  CASA
+  TERRENO
+  COMERCIAL
+  COBERTURA
+  STUDIO
+  FAZENDA
+  GALPAO
+  KITNET
+  LOFT
+  FLAT
+  SOBRADO
+  CHACARA
+}
+
+enum PropertyCategory {
+  VENDA
+  LOCACAO
+  VENDA_LOCACAO
+  TEMPORADA
+  LEILAO
+}
+
+enum PropertyClass {
+  RESIDENCIAL
+  COMERCIAL
+}
+
+enum PropertyCondition {
+  NOVO
+  USADO
+  NA_PLANTA
+  EM_CONSTRUCAO
+}
+
+enum PropertySubType {
+  APARTAMENTO_PADRAO
+  APARTAMENTO_COBERTURA
+  APARTAMENTO_DUPLEX
+  APARTAMENTO_TRIPLEX
+  APARTAMENTO_GARDEN
+  APARTAMENTO_LOFT
+  APARTAMENTO_STUDIO
+  APARTAMENTO_KITNET
+  APARTAMENTO_FLAT
+  CASA_PADRAO
+  CASA_CONDOMINIO
+  CASA_VILA
+  CASA_SOBRADO
+  CASA_TERREA
+  CASA_GEMINADA
+  CHACARA
+  SITIO
+  FAZENDA
+  HARAS
+  SALA_COMERCIAL
+  LOJA
+  GALPAO
+  PREDIO_COMERCIAL
+  PONTO_COMERCIAL
+  HOTEL_POUSADA
+  TERRENO_PADRAO
+  TERRENO_CONDOMINIO
+  LOTE
+  CASA_DUPLEX
+  CASA_TRIPLEX
+  CASA_VILLAGIO
+  TERRENO_ESQUINA
+  TERRENO_DECLIVE
+  TERRENO_ACLIVE
+  TERRENO_PLANO
+}
+
+enum OwnerProfile {
+  CONSTRUTOR
+  INVESTIDOR
+  VENDEDOR
+  PROPRIETARIO
+}
+
+enum AddressVisibility {
+  COMPLETO
+  SOMENTE_RUA
+  SOMENTE_BAIRRO
+  OCULTO
+}
+
+enum LeadStatus {
+  NOVO
+  CONTATADO
+  QUALIFICADO
+  NEGOCIANDO
+  FECHADO
+  PERDIDO
+  ARQUIVADO
+  TRIAGEM
+  VISITA_FRIA
+  VISITA_MORNA
+  VISITA_QUENTE
+  PROPOSTA
+  SEM_INTERACAO
+  RETORNO
+  EM_ESPERA
+}
+
+enum LeadSource {
+  SITE
+  WHATSAPP
+  INDICACAO
+  PORTAIS
+  REDES_SOCIAIS
+  TELEFONE
+  PRESENCIAL
+  OUTROS
+  EMAIL
+  INSTAGRAM
+  FACEBOOK
+  TIKTOK
+  YOUTUBE
+  GOOGLE_ADS
+  META_ADS
+  OLX
+  ZAP_IMOVEIS
+  VIVA_REAL
+  IMOVELWEB
+  CHAVES_NA_MAO
+  PLACA
+  PLANTAO
+  EVENTO
+  MERCADO_LIVRE
+  ATTRIA
+  INSTAGRAM_TAPPY_ORGANICO
+  INSTAGRAM_TAPPY_ADS
+  INSTAGRAM_PESSOAL_ORGANICO
+  INSTAGRAM_PESSOAL_ADS
+  FACEBOOK_GROUPS
+  GOOGLE
+  PARCERIA_CORRETOR
+  OPEN_HOUSE
+  OFF_MARKET
+  AVALIACAO
+  CAPTACAO
+}
+
+enum LeadTicket {
+  COMPRA
+  LOCACAO
+  AMBOS
+  INVESTIMENTO
+  PERMUTA
+  OUTRO
+  LANCAMENTO
+}
+
+enum LeadTemperature {
+  QUENTE
+  MORNO
+  FRIO
+}
+
+enum LeadProfile {
+  COMPRADOR
+  INVESTIDOR
+  CONSTRUTOR
+  VENDEDOR
+  COMPRADOR_VENDEDOR
+  OUTRO
+}
+
+enum ComissaoStatus {
+  PENDENTE
+  PROCESSANDO
+  PAGO
+  CANCELADO
+}
+
+enum MetaStatus {
+  EM_ANDAMENTO
+  ATINGIDA
+  SUPERADA
+  NAO_ATINGIDA
+}
+
+enum ScheduleType {
+  LIGACAO
+  REUNIAO
+  VISITA
+  FOLLOWUP
+  REVISAO_QUALIFICACAO
+}
+
+enum ContractType {
+  PROPOSTA
+  CONTRATO
+  ADITIVO
+  DISTRATO
+}
+
+enum ContractCategory {
+  VENDA
+  LOCACAO
+  PERMUTA
+}
+
+enum ContractStatus {
+  RASCUNHO
+  ENVIADO
+  ASSINADO
+  CANCELADO
+}
+
+enum LeadPropertyType {
+  ORIGEM
+  ENVIADO
+  VISITADO
+  PROPOSTA
+  COMPRADO
+  INTERESSE_PERMUTA
+}
+
+enum PostStatus {
+  RASCUNHO
+  PUBLICADO
+  AGENDADO
+  ARQUIVADO
+}
+
+enum TaskStatus {
+  PENDENTE
+  EM_ANDAMENTO
+  CONCLUIDA
+  CANCELADA
+}
+
+enum TaskPriority {
+  BAIXA
+  MEDIA
+  ALTA
+  URGENTE
+}
+
+enum TaskType {
+  LIGACAO
+  VISITA
+  REUNIAO
+  FOLLOW_UP
+  DOCUMENTACAO
+  NEGOCIACAO
+  CONTRATO
+  VISTORIA
+  ENTREGA_CHAVES
+  OUTRO
+}
+
+enum BusinessPartnerType {
+  CORRETOR
+  IMOBILIARIA
+  CORRESPONDENTE_BANCARIO
+  ARQUITETO
+  CONSTRUTORA
+}
+
+enum CreciStatus {
+  ATIVO
+  SUSPENSO
+  INATIVO
+}
+
+enum PartnershipFormat {
+  CAPTADOR
+  FIFTY_PADRAO
+  PARCEIRO_PREMIUM
+}
+
+enum PartnershipTermStatus {
+  SEM_CONTRATO
+  ENVIADO
+  ASSINADO
+}
+
+enum ScheduledVisitStatus {
+  AGENDADA
+  CONFIRMADA
+  REALIZADA
+  CANCELADA
+  REAGENDADA
+  NAO_COMPARECEU
+}
+
+enum PartnerApprovalStatus {
+  PENDENTE
+  APROVADO
+  REJEITADO
+}
+
+model TappyGalleryPhoto {
+  id             String   @id @default(cuid())
+  url            String
+  storageKey     String
+  caption        String?
+  width          Int?
+  height         Int?
+  mimeType       String?
+  sizeBytes      Int?
+  sortOrder      Int      @default(0)
+  isPublished    Boolean  @default(true)
+  uploadedById   String?
+  galeriaId      String?  // null = galeria legado "Tappy Summit"
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  galeria        GaleriaEvento? @relation(fields: [galeriaId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([isPublished, sortOrder])
+  @@index([galeriaId])
+  @@map("tappy_gallery_photos")
+}
+
+// Galeria por evento (Tappy Summit, Open House, Inauguração, etc.)
+// Cada galeria cria uma subpasta em "galerias/" no storage.
+model GaleriaEvento {
+  id           String   @id @default(cuid())
+  nome         String
+  slug         String   @unique
+  descricao    String?
+  folderKey    String   // ex: galerias/tappy-summit
+  coverUrl     String?
+  isPublished  Boolean  @default(true)
+  uploadedById String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  fotos        TappyGalleryPhoto[]
+
+  @@index([slug])
+  @@map("galeria_eventos")
+}
+
+model SummitCampaignProperty {
+  id            String   @id @default(cuid())
+  name          String
+  referenceCode String?
+  price         String
+  bonus         String
+  bonusIcon   String   @default("plane") // plane, smartphone, watch, gift, restaurant, home, car, headphone, suitcase
+  specs       String?
+  photoUrl    String?
+  driveUrl    String?
+  highlight   Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isActive, sortOrder])
+  @@map("summit_campaign_properties")
+}
+
+model SummitTeamMember {
+  id           String   @id @default(cuid())
+  name         String
+  phone        String?
+  whatsappUrl  String?
+  photoUrl     String?
+  role         String?
+  isActive     Boolean  @default(true)
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([isActive, sortOrder])
+  @@map("summit_team_members")
+}
+
+// ─── Sistema Jurídico ─────────────────────────────────────────────────────────
+
+model Negocio {
+  id                  String              @id @default(cuid())
+  codigo              String              @unique
+  fase                NegocioFase         @default(DADOS_RECEBIDOS)
+  tipoOperacao        NegocioTipoOperacao @default(PADRAO)
+  tipoNegocio         String              @default("VENDA") // VENDA | LOCACAO
+  arquivado           Boolean             @default(false)
+  arquivadoAt         DateTime?
+
+  // Imóvel
+  imovelCondominio    String?
+  imovelEndereco      String?
+  imovelCep           String?
+  imovelLogradouro    String?
+  imovelNumero        String?
+  imovelComplemento   String?
+  imovelCidade        String?
+  imovelUf            String?
+  imovelMatricula     String?
+  imovelMatriculaVencida Boolean          @default(false)
+  imovelCri           String?
+  imovelInscricaoFiscal String?
+  imovelSituacao      String?
+  imovelSaldoDevedor  Float?
+  imovelBancoCredor   String?
+  imovelMobiliario    Boolean             @default(false)
+  imovelMobiliarioItens Json?
+  imovelLaudemioDetectado Boolean         @default(false)
+
+  // Negócio — financeiro
+  valorTotal          Float?
+  comissaoPercentual  Float?
+  comissaoValor       Float?
+  comissaoResponsavel String?
+  comissaoVendedorPct Float?
+  comissaoCompradorPct Float?
+  posseDefinicao      String?
+  possePrazo          String?
+  posseTextoGerado    String?
+
+  // Permuta
+  permutaAtiva        Boolean             @default(false)
+  permutaDados        Json?
+
+  // Campos adicionais por tipo (JSON flexível)
+  dadosAdicionais     Json?
+
+  // Observações jurídicas (somente admin, não vai para minuta)
+  observacoesJuridico String?
+  // Caixa de anotações do contrato (comentários, orientações — alimentam a IA)
+  anotacoesContrato   String?
+
+  // Controle
+  snapshotEnviado     Json?
+  snapshotVersao      Int                 @default(0)
+  enviadoAt           DateTime?
+  corretorId          String
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  corretor            User                @relation("NegocioCorretor", fields: [corretorId], references: [id])
+  partes              NegocioParte[]
+  documentos          NegocioDocumento[]
+  parcelas            NegocioParcela[]
+  corretores          NegocioCorretorEnvolvido[]
+  pendencias          NegocioPendencia[]
+  logs                NegocioLog[]
+  minutas             NegocioMinuta[]
+
+  @@index([fase])
+  @@index([corretorId])
+  @@index([tipoOperacao])
+  @@map("negocios")
+}
+
+model NegocioParte {
+  id                  String           @id @default(cuid())
+  negocioId           String
+  tipo                NegocioTipoParte
+  ordem               Int              @default(0)
+
+  // Identificação (Grupo 1 — RG/CNH)
+  nome                String?
+  cpf                 String?
+  nascimento          DateTime?
+  filiacaoMae         String?
+  filiacaoPai         String?
+  nacionalidade       String?
+
+  // Estado civil (Grupo 2 — certidão civil)
+  estadoCivil         String?
+  regimeBens          String?
+  conjuge             String?
+
+  // Endereço (Grupo 3 — comprovante)
+  cep                 String?
+  logradouro          String?
+  numero              String?
+  complemento         String?
+  cidade              String?
+  uf                  String?
+
+  // Contato e bancários (Grupo 4 — sempre manual)
+  profissao           String?
+  email               String?
+  telefone            String?
+  banco               String?
+  agencia             String?
+  conta               String?
+  pix                 String?
+
+  // Pessoa Jurídica
+  isPessoaJuridica    Boolean          @default(false)
+  cnpj                String?
+  razaoSocial         String?
+  representanteNome   String?
+  representanteCpf    String?
+
+  // Procuração
+  temProcuracao       Boolean          @default(false)
+  procuradorNome      String?
+  procuradorCpf       String?
+
+  // Comprador especiais
+  usaFgts             Boolean          @default(false)
+  fgtsConta           String?
+  fgtsBanco           String?
+  isEstrangeiro       Boolean          @default(false)
+
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+
+  negocio             Negocio          @relation(fields: [negocioId], references: [id], onDelete: Cascade)
+
+  @@index([negocioId])
+  @@map("negocio_partes")
+}
+
+model NegocioDocumento {
+  id                  String                  @id @default(cuid())
+  negocioId           String
+  tipo                NegocioDocumentoTipo
+  status              NegocioDocumentoStatus  @default(PENDENTE)
+  parteId             String?
+  fileUrl             String?
+  fileKey             String?
+  fileName            String?
+  dadosExtraidos      Json?
+  confiancaPorCampo   Json?
+  uploadedById        String?
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
+
+  negocio             Negocio                 @relation(fields: [negocioId], references: [id], onDelete: Cascade)
+
+  @@index([negocioId])
+  @@index([tipo])
+  @@map("negocio_documentos")
+}
+
+model NegocioParcela {
+  id                  String              @id @default(cuid())
+  negocioId           String
+  tipo                NegocioParcelaTipo
+  valor               Float
+  data                DateTime?
+  condicao            String?
+  ordem               Int                 @default(0)
+  createdAt           DateTime            @default(now())
+
+  negocio             Negocio             @relation(fields: [negocioId], references: [id], onDelete: Cascade)
+
+  @@index([negocioId])
+  @@map("negocio_parcelas")
+}
+
+model NegocioCorretorEnvolvido {
+  id                  String   @id @default(cuid())
+  negocioId           String
+  nome                String
+  creci               String?
+  empresa             String?
+  percentual          Float
+  valorComissao       Float?
+  formaPagamento      String?
+  parcelasVinculadas  Json?
+  createdAt           DateTime @default(now())
+
+  negocio             Negocio  @relation(fields: [negocioId], references: [id], onDelete: Cascade)
+
+  @@index([negocioId])
+  @@map("negocio_corretores_envolvidos")
+}
+
+model NegocioPendencia {
+  id                  String                @id @default(cuid())
+  negocioId           String
+  campo               String
+  descricao           String
+  bloqueante          Boolean               @default(false)
+  status              NegocioPendenciaStatus @default(ABERTA)
+  responsavel         String?
+  resolvidoAt         DateTime?
+  resolvidoPorId      String?
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+
+  negocio             Negocio               @relation(fields: [negocioId], references: [id], onDelete: Cascade)
+
+  @@index([negocioId])
+  @@index([status])
+  @@map("negocio_pendencias")
+}
+
+model NegocioLog {
+  id                  String   @id @default(cuid())
+  negocioId           String
+  campo               String
+  valorAnterior       String?
+  valorNovo           String?
+  origem              String
+  userId              String?
+  userName            String?
+  createdAt           DateTime @default(now())
+
+  negocio             Negocio  @relation(fields: [negocioId], references: [id], onDelete: Cascade)
+
+  @@index([negocioId])
+  @@index([createdAt])
+  @@map("negocio_logs")
+}
+
+model NegocioMinuta {
+  id                  String   @id @default(cuid())
+  negocioId           String
+  versao              Int      @default(1)
+  docxUrl             String?
+  docxKey             String?
+  geradoPorId         String?
+  geradoPorNome       String?
+  geradoAt            DateTime @default(now())
+  salvoAt             DateTime?
+  observacoes         String?
+
+  negocio             Negocio  @relation(fields: [negocioId], references: [id], onDelete: Cascade)
+
+  @@index([negocioId])
+  @@map("negocio_minutas")
+}
+
+model ContratoTemplate {
+  id                  String              @id @default(cuid())
+  tipoOperacao        NegocioTipoOperacao @unique
+  docxUrl             String
+  docxKey             String
+  uploadedById        String?
+  uploadedByNome      String?
+  ativo               Boolean             @default(true)
+  aiInstrucao         String?             // Instruções/orientações para a IA ao gerar minutas deste tipo
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  @@map("contrato_templates")
+}
+
+// Base de conhecimento geral da IA jurídica (singleton — registro único id="default")
+model JuridicoIAConfig {
+  id               String   @id @default("default")
+  baseConhecimento String?  // Referências, diretrizes e instruções gerais para todas as minutas
+  updatedAt        DateTime @updatedAt
+  updatedByNome    String?
+
+  @@map("juridico_ia_config")
+}
+
+// Documentos de referência anexados à base de conhecimento da IA jurídica
+// (contratos-modelo, exemplos de formatos, manuais). A equipe anexa e, a
+// partir deles, vai escrevendo os macetes na base de conhecimento.
+model JuridicoIaReferencia {
+  id             String               @id @default(cuid())
+  fileName       String
+  fileKey        String
+  mimeType       String?
+  size           Int?
+  tipoOperacao   NegocioTipoOperacao? // null = referência geral
+  uploadedByNome String?
+  createdAt      DateTime             @default(now())
+
+  @@map("juridico_ia_referencias")
+}
+
+// Enums — Sistema Jurídico
+
+enum NegocioFase {
+  DADOS_RECEBIDOS
+  VALIDACAO_INTERNA
+  PENDENTE_DOC
+  EXTRACAO_IA
+  VALIDACAO_PARTES
+  REVISAO_JURIDICA
+  MINUTA_GERADA
+  PRONTO_ASSINATURA
+}
+
+enum NegocioTipoOperacao {
+  PADRAO
+  FINANCIAMENTO_QUITADO
+  FINANCIAMENTO_INTERVENIENTE
+  PARCELAMENTO_AF
+  PARCELAMENTO_SIMPLES
+  CESSAO_PLANTA
+  CESSAO_PRONTA
+  PERMUTA_IMOVEL
+  PERMUTA_VEICULO
+  PERMUTA_TORNA
+}
+
+enum NegocioTipoParte {
+  VENDEDOR
+  COMPRADOR
+}
+
+enum NegocioDocumentoTipo {
+  MATRICULA
+  ESPELHO_IPTU
+  CND_CONDOMINIO
+  RG_CNH
+  CERTIDAO_CIVIL
+  COMPROVANTE_ENDERECO
+  EXTRATO_FINANCIAMENTO
+  ANUENCIA_INCORPORADORA
+  CONTRATO_SOCIAL
+  ATA_ELEICAO_DIRETORES
+  PROCURACAO
+  QUITACAO_VEICULO
+  OUTRO
+}
+
+enum NegocioDocumentoStatus {
+  PENDENTE
+  ENVIADO
+  PROCESSANDO
+  EXTRAIDO
+  VALIDADO
+}
+
+enum NegocioPendenciaStatus {
+  ABERTA
+  RESOLVIDA
+}
+
+enum NegocioParcelaTipo {
+  SINAL
+  INTERMEDIARIA
+  SALDO
+}
+
+// ─────────────────────────── Tappy IQ ───────────────────────────
+// Log + cache das consultas (Seekloc/PH3A). Cada busca vira uma linha;
+// repetições dentro do TTL reaproveitam o `resultado` (não cobra 2x).
+model TappyIqBusca {
+  id        String   @id @default(cuid())
+  userId    String?
+  userName  String?
+  source    String // 'seekloc' | 'ph3a'
+  tipo      String // 'documento','nome','telefone',... | 'detail'
+  kind      String   @default("dossie") // 'lista' | 'dossie'
+  cacheKey  String
+  label     String? // entrada legível (ex.: "CPF: 111..." / "Nome: João")
+  documento String?
+  nome      String?
+  resultado Json? // { dossie, raw } (dossie) ou { hits, qtde, mensagem } (lista)
+  fromCache Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([cacheKey, createdAt])
+  @@index([userId, createdAt])
+  @@index([source, createdAt])
+  @@index([kind, createdAt])
+}

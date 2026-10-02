@@ -1,0 +1,146 @@
+# ================================
+# DOCKER COMPOSE - TAPPYIMOB PRODUÇÃO
+# ================================
+
+services:
+  # ================================
+  # POSTGRESQL DATABASE
+  # ================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: tappyimob-postgres
+    restart: always
+    environment:
+      - POSTGRES_USER=tappyimob
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=tappyimob
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - tappyimob-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tappyimob -d tappyimob"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ================================
+  # APLICAÇÃO NEXT.JS
+  # ================================
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - DATABASE_URL=${DATABASE_URL}
+        - OPENAI_API_KEY=${OPENAI_API_KEY}
+        - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+        - DEEPSEEK_API_BASE_URL=${DEEPSEEK_API_BASE_URL}
+        - DEEPSEEK_MODEL=${DEEPSEEK_MODEL}
+        - XAI_API_KEY=${XAI_API_KEY}
+        - BLOB_READ_WRITE_TOKEN=${BLOB_READ_WRITE_TOKEN}
+        - MINIO_ENDPOINT=${MINIO_ENDPOINT}
+        - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+        - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+        - MINIO_BUCKET=${MINIO_BUCKET}
+        - MINIO_PUBLIC_URL=${MINIO_PUBLIC_URL}
+    container_name: tappyimob-app
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+      - BLOB_READ_WRITE_TOKEN=${BLOB_READ_WRITE_TOKEN}
+      - DEEPSEEK_API_BASE_URL=${DEEPSEEK_API_BASE_URL}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - DEEPSEEK_MODEL=${DEEPSEEK_MODEL}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - XAI_API_KEY=${XAI_API_KEY}
+      - NEXTAUTH_URL=${NEXTAUTH_URL}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - WAHA_API_URL=${WAHA_API_URL}
+      - WAHA_API_KEY=${WAHA_API_KEY}
+      - WAHA_DEFAULT_SESSION=${WAHA_DEFAULT_SESSION}
+      # Isolamento multi-tenant: esta instância WAHA é compartilhada com outros
+      # sites/clientes. Só sessões com este prefixo (ou nesta lista) aparecem
+      # e podem ser gerenciadas por este site.
+      - WAHA_SESSION_PREFIX=${WAHA_SESSION_PREFIX:-tappy}
+      - WAHA_ALLOWED_SESSIONS=${WAHA_ALLOWED_SESSIONS:-tappy,Funil,Jake,WhatsApp}
+      - LEAD_NOTIFY_PHONES=${LEAD_NOTIFY_PHONES}
+      # Espelha os leads do site num webhook externo (Make -> planilha).
+      # Vazio = desligado.
+      - LEAD_WEBHOOK_URL=${LEAD_WEBHOOK_URL}
+      # Modelo de texto da Tappy IA (troca sem mexer no código)
+      - TAPPY_IA_MODEL=${TAPPY_IA_MODEL:-gpt-5.4-mini}
+      - MINIO_ENDPOINT=http://minio:9000
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER:-tappyimob}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-TappyImobStorage2026!}
+      - MINIO_BUCKET=${MINIO_BUCKET:-tappyimob-storage}
+      - MINIO_PUBLIC_URL=https://tappyimob.com.br/storage
+      - APIFY_API_TOKEN=${APIFY_API_TOKEN}
+      - APIFY_INSTAGRAM_ACTOR_ID=${APIFY_INSTAGRAM_ACTOR_ID}
+      - MAILCOW_API_URL=${MAILCOW_API_URL}
+      - MAILCOW_API_KEY=${MAILCOW_API_KEY}
+      - RESEND_API_KEY=${RESEND_API_KEY}
+      # Tappy IQ — enriquecimento de leads
+      - SEEKLOC_WS_URL=${SEEKLOC_WS_URL:-http://200.201.193.100/seekloc/ws.php}
+      - SEEKLOC_WS_USER=${SEEKLOC_WS_USER:-webservice}
+      - SEEKLOC_WS_PWD=${SEEKLOC_WS_PWD}
+      - SEEKLOC_WS_EMP=${SEEKLOC_WS_EMP:-0037}
+      - PH3A_API_URL=${PH3A_API_URL:-https://api.ph3a.com.br/DataBusca}
+      - PH3A_API_KEY=${PH3A_API_KEY}
+      - PH3A_USER=${PH3A_USER}
+      - PH3A_PWD=${PH3A_PWD}
+      - PH3A_PACKAGE_ID=${PH3A_PACKAGE_ID}
+      - TAPPY_IQ_CACHE_DAYS=${TAPPY_IQ_CACHE_DAYS:-60}
+    networks:
+      - tappyimob-network
+      - mailcow_mailcow-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ================================
+  # MINIO - STORAGE S3-COMPATIBLE
+  # ================================
+  minio:
+    image: minio/minio:latest
+    container_name: tappyimob-minio
+    restart: always
+    command: server /data --console-address ":9001"
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER:-tappyimob}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-TappyImobStorage2026!}
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9000:9000"   # API S3
+      - "9001:9001"   # Console Web
+    networks:
+      - tappyimob-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  tappyimob-network:
+    driver: bridge
+  mailcow_mailcow-network:
+    external: true
+
+volumes:
+  postgres_data:
+  minio_data:
