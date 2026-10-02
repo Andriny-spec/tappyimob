@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
+import { JWT_SECRET_TEXTO } from "@/lib/jwt";
 
 const loginSchema = z.object({
   email: z.string().email("E-mail inválido"),
@@ -65,7 +66,7 @@ export async function POST(request: NextRequest) {
         role: user.role,
         type: "fotografo",
       },
-      process.env.JWT_SECRET || "secret-key",
+      JWT_SECRET_TEXTO,
       { expiresIn: "7d" }
     );
 

@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import jwt from "jsonwebtoken";
 import { getSession } from "./auth";
+import { JWT_SECRET_TEXTO } from "@/lib/jwt";
 
 export interface FotografoSession {
   userId: string;
@@ -20,7 +21,7 @@ function verifyBearerToken(request: NextRequest): FotografoSession | null {
   try {
     const decoded = jwt.verify(
       token,
-      process.env.JWT_SECRET || "secret-key"
+      JWT_SECRET_TEXTO
     ) as FotografoSession;
     if (decoded.type !== "fotografo" || decoded.role !== "FOTOGRAFO") return null;
     return decoded;

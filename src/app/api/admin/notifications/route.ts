@@ -2,13 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { cookies } from "next/headers";
 import jwt from "jsonwebtoken";
+import { JWT_SECRET_TEXTO } from "@/lib/jwt";
 
 async function getUserFromToken() {
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get("token")?.value;
     if (!token) return null;
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || "secret") as any;
+    const decoded = jwt.verify(token, JWT_SECRET_TEXTO) as any;
     return decoded.userId || decoded.id || null;
   } catch {
     return null;

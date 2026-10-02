@@ -3,10 +3,7 @@ import { cookies, headers } from "next/headers";
 import { createToken, verifyToken } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { jwtVerify } from "jose";
-
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || "tappyimob-super-secret-key-2024"
-);
+import { JWT_SECRET } from "@/lib/jwt";
 
 // Nunca cachear: emite token novo com dados frescos do usuário.
 export const dynamic = "force-dynamic";

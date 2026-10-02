@@ -257,6 +257,7 @@ model User {
   pushTokens                PushToken[]
 
   @@map("users")
+  saasAssinante             SaasAssinante?           @relation("SaasAssinanteUsuario")
 }
 
 // Histórico de edições cadastrais do usuário (Meus Dados)
@@ -3504,4 +3505,139 @@ model TappyIqBusca {
   @@index([userId, createdAt])
   @@index([source, createdAt])
   @@index([kind, createdAt])
+}
+
+// ============================================================
+// SaaS — imobiliárias assinantes da plataforma
+// Gestão da plataforma (Tappy). Não confundir com os dados do CRM:
+// imóveis, leads etc. ainda não são separados por assinante.
+// ============================================================
+
+enum SaasStatusAssinatura {
+  TRIAL
+  ATIVA
+  INADIMPLENTE
+  SUSPENSA
+  CANCELADA
+}
+
+enum SaasCiclo {
+  MENSAL
+  ANUAL
+}
+
+enum SaasStatusSite {
+  CONFIGURANDO
+  PUBLICADO
+  SUSPENSO
+}
+
+enum SaasStatusPagamento {
+  PENDENTE
+  PAGO
+  ATRASADO
+  CANCELADO
+  ESTORNADO
+}
+
+enum SaasMetodoPagamento {
+  PIX
+  BOLETO
+  CARTAO
+  MANUAL
+}
+
+model SaasPlano {
+  id              String   @id @default(cuid())
+  nome            String
+  slug            String   @unique
+  chamada         String?
+  descricao       String?  @db.Text
+  precoMensal     Float
+  precoAnual      Float // valor MENSAL equivalente no plano anual
+  limiteUsuarios  Int?     // null = ilimitado
+  limiteImoveis   Int?
+  limiteWhatsapp  Int?     // sessões de WhatsApp
+  limiteStorageGb Int?
+  trialDias       Int      @default(14)
+  recursos        String[]
+  destaque        Boolean  @default(false)
+  ativo           Boolean  @default(true) // inativo: some da home, assinantes atuais continuam
+  ordem           Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  assinantes SaasAssinante[]
+
+  @@map("saas_planos")
+}
+
+model SaasAssinante {
+  id              String               @id @default(cuid())
+  nome            String // nome da imobiliária
+  responsavel     String
+  email           String
+  telefone        String?
+  documento       String? // CNPJ ou CPF
+  slug            String               @unique // nome.tappyimob.com.br
+  dominioProprio  String?              @unique
+  status          SaasStatusAssinatura @default(TRIAL)
+  ciclo           SaasCiclo            @default(MENSAL)
+  valor           Float // valor cobrado por ciclo (pode ter desconto)
+  trialAte        DateTime?
+  inicioEm        DateTime             @default(now())
+  proximaCobranca DateTime?
+  canceladoEm     DateTime?
+  siteStatus      SaasStatusSite       @default(CONFIGURANDO)
+  siteConfig      Json? // logo, cores, textos da home
+  observacoes     String?              @db.Text
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  planoId   String
+  plano     SaasPlano      @relation(fields: [planoId], references: [id])
+  usuarioId String?        @unique // login do assinante (perfil ASSINANTE)
+  usuario   User?          @relation("SaasAssinanteUsuario", fields: [usuarioId], references: [id], onDelete: SetNull)
+  pagamentos SaasPagamento[]
+  eventos    SaasEvento[]
+
+  @@index([status])
+  @@index([planoId])
+  @@map("saas_assinantes")
+}
+
+model SaasPagamento {
+  id          String              @id @default(cuid())
+  valor       Float
+  referencia  String // ex.: "10/2026" ou "Anual 2026/2027"
+  vencimento  DateTime
+  pagoEm      DateTime?
+  status      SaasStatusPagamento @default(PENDENTE)
+  metodo      SaasMetodoPagamento @default(PIX)
+  gatewayId   String? // id da cobrança no gateway, quando integrado
+  observacao  String?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  assinanteId String
+  assinante   SaasAssinante @relation(fields: [assinanteId], references: [id], onDelete: Cascade)
+
+  @@index([assinanteId])
+  @@index([status, vencimento])
+  @@map("saas_pagamentos")
+}
+
+/** Linha do tempo do assinante: mudanças de plano, status, pagamentos. */
+model SaasEvento {
+  id          String   @id @default(cuid())
+  tipo        String
+  descricao   String
+  autor       String?
+  createdAt   DateTime @default(now())
+
+  assinanteId String
+  assinante   SaasAssinante @relation(fields: [assinanteId], references: [id], onDelete: Cascade)
+
+  @@index([assinanteId, createdAt])
+  @@map("saas_eventos")
 }
